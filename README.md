@@ -33,15 +33,14 @@ Vault/
 │   │   └── Transaction.cs
 │   └── Persistence/
 │       └── VaultDbContext.cs
+│       └── VaultDbContextFactory.cs
 ├── Vault.Service/          # Business logic og services
 │   ├── Interfaces/
 │   │   ├── IAuthenticationService.cs
 │   │   ├── IBankAccountService.cs
-│   │   └── IVaultService.cs (for password management)
 │   ├── Services/
 │   │   ├── AuthenticationService.cs
 │   │   ├── BankAccountService.cs
-│   │   └── VaultService.cs
 │   ├── Security/
 │   │   ├── IEncryptionService.cs
 │   │   ├── EncryptionService.cs
@@ -50,6 +49,9 @@ Vault/
 │   └── DTOs/
 │       ├── AuthDtos.cs
 │       └── BankAccountDtos.cs
+├── Vault.Testing/          # E2E & Unit testing
+│   ├── ServiceTests.cs
+│   └── VaultApplicationE2ETests.cs
 └── Vault/                  # Blazor Web Application
     ├── Components/
     │   ├── Pages/
@@ -257,7 +259,7 @@ Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId
 
 ## Performance Overvejelser
 
-- **Lazy Loading**: Relaterede entiteter loads ikke automatisk
+- **Lazy Loading**: Relaterede entiteter loader ikke automatisk
 - **Efficient Queries**: Databaseforespørgsler bruger `.FirstOrDefaultAsync()` for at minimalisere data transfer
 - **Caching**: Session bruges til at cache bruger-ID og username
 - **Validation**: Input valideres både frontend og backend
@@ -274,27 +276,10 @@ Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId
 - [ ] Integration tests
 - [ ] Selenium E2E tests
 
-## Fejlfinding
-
-### Database forbindelse fejler
-```
-Sørg for at SQL Server (LocalDB) kører:
-sqllocaldb start
-```
-
-### Migration fejler
-```
-dotnet ef database drop
-dotnet ef database update
-```
-
-### Session data mistes
-Sørg for at browser accepterer cookies og session timeout er korrekt sat i Program.cs
-
 ## Licens
 
 MIT License - Se LICENSE filen for detaljer
 
 ## Kontakt
 
-For spørgsmål eller issues, kontakt projektholdet.
+For spørgsmål eller issues, kontakt synx_eu på discord.
