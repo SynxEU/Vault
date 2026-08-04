@@ -38,32 +38,32 @@
                     }
                     else
                     {
-                        <EditForm Model="@RegisterRequest" OnValidSubmit="@HandleRegister" class="needs-validation">
+                        <EditForm Model="@RegisterRequest" OnValidSubmit="@HandleRegister" FormName="register-form" class="needs-validation">
                             <DataAnnotationsValidator />
 
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
-                                <InputText id="username" class="form-control form-control-lg" @bind-Value="RegisterRequest.Username" placeholder="Choose a username" />
+                                <InputText id="username" class="form-control form-control-lg" @bind-Value="RegisterRequest.Username" @bind-Value:event="oninput" placeholder="Choose a username" />
                                 <ValidationMessage For="@(() => RegisterRequest.Username)" class="d-block mt-2" />
                                 <small class="text-muted">3-20 characters, alphanumeric only</small>
                             </div>
 
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email Address</label>
-                                <InputText id="email" type="email" class="form-control form-control-lg" @bind-Value="RegisterRequest.Email" placeholder="your@email.com" />
+                                <InputText id="email" type="email" class="form-control form-control-lg" @bind-Value="RegisterRequest.Email" @bind-Value:event="oninput" placeholder="your@email.com" />
                                 <ValidationMessage For="@(() => RegisterRequest.Email)" class="d-block mt-2" />
                             </div>
 
                             <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
-                                <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.Password" placeholder="Minimum 8 characters" />
+                                <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.Password" @bind-Value:event="oninput" placeholder="Minimum 8 characters" />
                                 <ValidationMessage For="@(() => RegisterRequest.Password)" class="d-block mt-2" />
                                 <small class="text-muted">Min 8 chars, mix of letters, numbers & symbols recommended</small>
                             </div>
 
                             <div class="mb-4">
                                 <label for="confirmPassword" class="form-label">Confirm Password</label>
-                                <InputText id="confirmPassword" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.ConfirmPassword" placeholder="Re-enter password" />
+                                <InputText id="confirmPassword" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.ConfirmPassword" @bind-Value:event="oninput" placeholder="Re-enter password" />
                                 <ValidationMessage For="@(() => RegisterRequest.ConfirmPassword)" class="d-block mt-2" />
                             </div>
 
