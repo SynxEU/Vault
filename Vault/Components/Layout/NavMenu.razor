@@ -1,0 +1,75 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">🔐 Vault</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        @if (IsAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="accounts">
+                    <span class="bi bi-bank-nav-menu" aria-hidden="true"></span> My Accounts
+                </NavLink>
+            </div>
+
+            <hr class="my-2" />
+
+            <div class="nav-item px-3">
+                <span class="nav-link">
+                    <small class="text-muted">Logged in as: @Username</small>
+                </span>
+            </div>
+
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link text-start w-100" @onclick="Logout">
+                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login">
+                    <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="register">
+                    <span class="bi bi-person-plus-nav-menu" aria-hidden="true"></span> Register
+                </NavLink>
+            </div>
+        }
+    </nav>
+</div>
+
+@code {
+    private bool IsAuthenticated = false;
+    private string? Username;
+
+    protected override void OnInitialized()
+    {
+        var userId = HttpContextAccessor.HttpContext?.Session.GetInt32("UserId");
+        Username = HttpContextAccessor.HttpContext?.Session.GetString("Username");
+        IsAuthenticated = userId.HasValue && userId > 0;
+    }
+
+    private void Logout()
+    {
+        HttpContextAccessor.HttpContext?.Session.Clear();
+    }
+}
+

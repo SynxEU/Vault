@@ -1,0 +1,92 @@
+@page "/login"
+@using Microsoft.AspNetCore.Http
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+<PageTitle>Login - Vault</PageTitle>
+
+<div class="hero-section">
+    <div class="container text-center py-5">
+        <h1>🔐 VAULT</h1>
+        <p class="lead">Secure Banking System</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-6">
+            <div class="card">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">Welcome Back</h2>
+                    
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>Login Failed</strong><br/>
+                            @ErrorMessage
+                            <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="@LoginRequest" OnValidSubmit="@HandleLogin" class="needs-validation">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-4">
+                            <label for="username" class="form-label">Username</label>
+                            <InputText id="username" class="form-control form-control-lg" @bind-Value="LoginRequest.Username" placeholder="Enter your username" />
+                            <ValidationMessage For="@(() => LoginRequest.Username)" class="d-block mt-2" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="LoginRequest.Password" placeholder="Enter your password" />
+                            <ValidationMessage For="@(() => LoginRequest.Password)" class="d-block mt-2" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </button>
+                    </EditForm>
+
+                    <hr />
+                    <p class="text-center text-muted mb-0">
+                        Don't have an account? <a href="/register" class="fw-bold text-decoration-none">Sign up here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest LoginRequest = new();
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+            var response = await AuthService.LoginAsync(LoginRequest);
+            
+            if (response.Success && response.User != null)
+            {
+                HttpContextAccessor.HttpContext?.Session.SetInt32("UserId", response.User.Id);
+                HttpContextAccessor.HttpContext?.Session.SetString("Username", response.User.Username);
+                HttpContextAccessor.HttpContext?.Session.SetString("Email", response.User.Email);
+                
+                Navigation.NavigateTo("/accounts");
+            }
+            else
+            {
+                ErrorMessage = response.Message ?? "Login failed. Please check your credentials.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+}
+

@@ -1,0 +1,413 @@
+@page "/accounts"
+@using Microsoft.AspNetCore.Http
+@inject IBankAccountService BankAccountService
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JS
+
+<PageTitle>My Accounts - Vault</PageTitle>
+
+@if (!IsAuthenticated)
+{
+    <div class="alert alert-warning" role="alert">
+        Please <a href="/login">login</a> to access your accounts.
+    </div>
+}
+else
+{
+    <div class="hero-section py-4">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-white mb-0">💰 My Accounts</h2>
+                    <small class="text-white-50">Manage your bank accounts securely</small>
+                </div>
+                <button class="btn btn-light fw-bold" @onclick="ShowCreateForm">
+                    <i class="bi bi-plus-circle"></i> Add Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error</strong><br/>
+                @ErrorMessage
+                <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+            </div>
+        }
+
+        @if (ShowCreate)
+        {
+            <div class="card card-header border-0 mb-4">
+                <div class="p-4">
+                    <h5 class="mb-4">
+                        <i class="bi bi-plus-circle"></i> Add New Bank Account
+                    </h5>
+                    <EditForm Model="@NewAccount" OnValidSubmit="@HandleCreateAccount">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Account Name</label>
+                                <InputText class="form-control" @bind-Value="NewAccount.AccountName" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Bank Name</label>
+                                <InputText class="form-control" @bind-Value="NewAccount.BankName" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Account Number</label>
+                                <InputText class="form-control" @bind-Value="NewAccount.AccountNumber" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">IBAN</label>
+                                <InputText class="form-control" @bind-Value="NewAccount.IBAN" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Balance</label>
+                                <InputNumber class="form-control" @bind-Value="NewAccount.Balance" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Currency</label>
+                                <InputText class="form-control" @bind-Value="NewAccount.Currency" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn btn-success">Create Account</button>
+                            <button type="button" class="btn btn-secondary" @onclick="CancelCreate">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        @if (Accounts != null && Accounts.Count > 0)
+        {
+            <div class="row">
+                @foreach (var account in Accounts)
+                {
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">@account.AccountName</h5>
+                                <p class="card-text text-muted">Created: @account.CreatedAt.ToString("dd/MM/yyyy")</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-info" @onclick="() => ViewAccount(account.Id)">View Details</button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(account.Id)">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info" role="alert">
+                No bank accounts yet. <a href="#" @onclick="ShowCreateForm">Create one now</a>
+            </div>
+        }
+
+        @if (SelectedAccountId.HasValue && SelectedAccount != null)
+        {
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title">Account Details: @SelectedAccount.AccountName</h5>
+                        <button class="btn btn-sm btn-secondary" @onclick="CloseAccountDetail">Close</button>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Account Number:</strong> @SelectedAccount.AccountNumber</p>
+                            <p><strong>IBAN:</strong> @SelectedAccount.IBAN</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Balance:</strong> @SelectedAccount.Balance.ToString("C2") @SelectedAccount.Currency</p>
+                            <p><strong>Bank:</strong> @SelectedAccount.BankName</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Update Balance</h6>
+                        <div class="input-group">
+                            <InputNumber class="form-control" @bind-Value="UpdateBalance" />
+                            <button class="btn btn-primary" @onclick="HandleUpdateBalance">Update</button>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6>Transactions</h6>
+                        <button class="btn btn-sm btn-success" @onclick="ShowTransactionForm">+ Add Transaction</button>
+                    </div>
+
+                    @if (ShowTransactionCreate)
+                    {
+                        <div class="mb-3 p-3 bg-light rounded">
+                            <EditForm Model="@NewTransaction" OnValidSubmit="@HandleCreateTransaction">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="mb-2">
+                                    <label class="form-label">Description</label>
+                                    <InputText class="form-control" @bind-Value="NewTransaction.Description" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Amount</label>
+                                    <InputNumber class="form-control" @bind-Value="NewTransaction.Amount" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Type (Debit/Credit)</label>
+                                    <InputText class="form-control" @bind-Value="NewTransaction.Type" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Recipient</label>
+                                    <InputText class="form-control" @bind-Value="NewTransaction.Recipient" />
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-success">Add</button>
+                                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelTransaction">Cancel</button>
+                            </EditForm>
+                        </div>
+                    }
+
+                    @if (Transactions != null && Transactions.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Recipient</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var transaction in Transactions)
+                                    {
+                                        <tr>
+                                            <td>@transaction.TransactionDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@transaction.Description</td>
+                                            <td>@transaction.Type</td>
+                                            <td>@transaction.Amount.ToString("C2")</td>
+                                            <td>@(transaction.Recipient ?? "-")</td>
+                                            <td>
+                                                <button class="btn btn-xs btn-danger" @onclick="() => DeleteTransaction(transaction.Id)">Delete</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No transactions yet</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<BankAccountDto>? Accounts;
+    private BankAccountDetailDto? SelectedAccount;
+    private int? SelectedAccountId;
+    private List<TransactionDto>? Transactions;
+    private CreateBankAccountRequest NewAccount = new();
+    private CreateTransactionRequest NewTransaction = new() { Type = "Debit" };
+    private decimal UpdateBalance;
+    private bool ShowCreate = false;
+    private bool ShowTransactionCreate = false;
+    private string ErrorMessage = string.Empty;
+    private bool IsAuthenticated = false;
+    private int? UserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserId = HttpContextAccessor.HttpContext?.Session.GetInt32("UserId");
+        if (UserId == null || UserId <= 0)
+        {
+            IsAuthenticated = false;
+            return;
+        }
+
+        IsAuthenticated = true;
+        await LoadAccounts();
+    }
+
+    private async Task LoadAccounts()
+    {
+        if (!UserId.HasValue) return;
+
+        var response = await BankAccountService.GetAllAccountsAsync(UserId.Value);
+        if (response.Success)
+        {
+            Accounts = response.Data;
+        }
+        else
+        {
+            ErrorMessage = response.Message ?? "Failed to load accounts";
+        }
+    }
+
+    private void ShowCreateForm() => ShowCreate = !ShowCreate;
+
+    private void CancelCreate()
+    {
+        ShowCreate = false;
+        NewAccount = new();
+    }
+
+    private async Task HandleCreateAccount()
+    {
+        if (!UserId.HasValue) return;
+
+        var response = await BankAccountService.CreateAccountAsync(UserId.Value, NewAccount);
+        if (response.Success)
+        {
+            await LoadAccounts();
+            NewAccount = new();
+            ShowCreate = false;
+            ErrorMessage = string.Empty;
+        }
+        else
+        {
+            ErrorMessage = response.Message ?? "Failed to create account";
+        }
+    }
+
+    private async Task ViewAccount(int accountId)
+    {
+        if (!UserId.HasValue) return;
+
+        SelectedAccountId = accountId;
+        var response = await BankAccountService.GetAccountAsync(UserId.Value, accountId);
+        if (response.Success)
+        {
+            SelectedAccount = response.Data;
+            UpdateBalance = SelectedAccount?.Balance ?? 0;
+            await LoadTransactions(accountId);
+        }
+    }
+
+    private async Task LoadTransactions(int accountId)
+    {
+        if (!UserId.HasValue) return;
+
+        var response = await BankAccountService.GetAccountTransactionsAsync(UserId.Value, accountId);
+        if (response.Success)
+        {
+            Transactions = response.Data;
+        }
+    }
+
+    private void CloseAccountDetail()
+    {
+        SelectedAccountId = null;
+        SelectedAccount = null;
+        Transactions = null;
+        ShowTransactionCreate = false;
+    }
+
+    private void ShowTransactionForm() => ShowTransactionCreate = !ShowTransactionCreate;
+
+    private void CancelTransaction()
+    {
+        ShowTransactionCreate = false;
+        NewTransaction = new() { Type = "Debit" };
+    }
+
+    private async Task HandleUpdateBalance()
+    {
+        if (!UserId.HasValue || !SelectedAccountId.HasValue) return;
+
+        var updateRequest = new UpdateBankAccountRequest
+        {
+            Id = SelectedAccountId.Value,
+            AccountName = SelectedAccount?.AccountName ?? "",
+            Balance = UpdateBalance
+        };
+
+        var response = await BankAccountService.UpdateAccountAsync(UserId.Value, updateRequest);
+        if (response.Success)
+        {
+            SelectedAccount = response.Data;
+            ErrorMessage = string.Empty;
+        }
+        else
+        {
+            ErrorMessage = response.Message ?? "Failed to update balance";
+        }
+    }
+
+    private async Task HandleCreateTransaction()
+    {
+        if (!UserId.HasValue || !SelectedAccountId.HasValue) return;
+
+        NewTransaction.BankAccountId = SelectedAccountId.Value;
+        var response = await BankAccountService.CreateTransactionAsync(UserId.Value, NewTransaction);
+        if (response.Success)
+        {
+            await LoadTransactions(SelectedAccountId.Value);
+            NewTransaction = new() { Type = "Debit" };
+            ShowTransactionCreate = false;
+        }
+        else
+        {
+            ErrorMessage = response.Message ?? "Failed to create transaction";
+        }
+    }
+
+    private async Task DeleteTransaction(int transactionId)
+    {
+        if (!UserId.HasValue || !SelectedAccountId.HasValue) return;
+
+        var response = await BankAccountService.DeleteTransactionAsync(UserId.Value, transactionId);
+        if (response.Success)
+        {
+            await LoadTransactions(SelectedAccountId.Value);
+        }
+        else
+        {
+            ErrorMessage = response.Message ?? "Failed to delete transaction";
+        }
+    }
+
+    private async Task DeleteAccount(int accountId)
+    {
+        if (!UserId.HasValue) return;
+
+        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this account?"))
+        {
+            var response = await BankAccountService.DeleteAccountAsync(UserId.Value, accountId);
+            if (response.Success)
+            {
+                await LoadAccounts();
+                CloseAccountDetail();
+            }
+            else
+            {
+                ErrorMessage = response.Message ?? "Failed to delete account";
+            }
+        }
+    }
+}
