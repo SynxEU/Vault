@@ -4,29 +4,34 @@ using Vault.Domain.Persistence;
 using Vault.Service.Interfaces;
 using Vault.Service.Security;
 using Vault.Service.Services;
+using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add Database Context
-var connectionString = builder.Configuration.GetConnectionString("VaultDb") 
+builder.Services.AddHttpClient();
+
+builder.Services.AddScoped<DialogService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<TooltipService>();
+builder.Services.AddScoped<ContextMenuService>();
+
+var connectionString = builder.Configuration.GetConnectionString("VaultDb")
     ?? "Server=(localdb)\\mssqllocaldb;Database=VaultDb;Trusted_Connection=true;";
-builder.Services.AddDbContext<VaultDbContext>(options =>
+builder.Services.AddDbContextPool<VaultDbContext>(options =>
     options.UseSqlServer(connectionString)
 );
 
-// Add Security Services
-builder.Services.AddScoped<IHashingService, HashingService>();
-builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+builder.Services.AddHttpContextAccessor();
 
-// Add Business Services
+builder.Services.AddSingleton<IHashingService, HashingService>();
+builder.Services.AddSingleton<IEncryptionService, EncryptionService>();
+
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IBankAccountService, BankAccountService>();
 
-// Add Session support for user state management
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -38,28 +43,46 @@ builder.Services.AddSession(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // The default HSTS value is 30 days. Change for production as needed.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
+app.UseRouting();
 app.UseSession();
 
-app.UseAntiforgery();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+    await next();
+});
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Initialize database
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<VaultDbContext>();
-    await db.Database.MigrateAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<VaultDbContext>();
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Database migrated successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database.");
+    }
 }
 
 app.Run();
