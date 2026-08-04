@@ -45,7 +45,6 @@ En Blazor Server applikation til sikker opbevaring af passwords og personlige do
 * \[ ] README.md med setup vejledning
 * \[ ] Architecture dokumentation
 * \[ ] API/Service dokumentation
-* \[ ] definer virkemåde, krav, benyttede Nuget-pakker og deres versioner, installationsvejledning, github badges osv
 
 ## Teknologivalg
 
