@@ -23,9 +23,7 @@ else
                     <h2 class="text-white mb-0">💰 My Accounts</h2>
                     <small class="text-white-50">Manage your bank accounts securely</small>
                 </div>
-                <button class="btn btn-light fw-bold" @onclick="ShowCreateForm">
-                    <i class="bi bi-plus-circle"></i> Add Account
-                </button>
+                <RadzenButton Text="Add Account" Click="ShowCreateForm" ButtonStyle="ButtonStyle.Light" />
             </div>
         </div>
     </div>
@@ -48,46 +46,46 @@ else
                     <h5 class="mb-4">
                         <i class="bi bi-plus-circle"></i> Add New Bank Account
                     </h5>
-                    <EditForm Model="@NewAccount" OnValidSubmit="@HandleCreateAccount">
+                    <EditForm Model="@NewAccount" OnValidSubmit="@HandleCreateAccount" FormName="create-bank-account-form">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Account Name</label>
-                                <InputText class="form-control" @bind-Value="NewAccount.AccountName" />
+                                <InputText id="accountName" class="form-control" @bind-Value="NewAccount.AccountName" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Bank Name</label>
-                                <InputText class="form-control" @bind-Value="NewAccount.BankName" />
+                                <InputText id="bankName" class="form-control" @bind-Value="NewAccount.BankName" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Account Number</label>
-                                <InputText class="form-control" @bind-Value="NewAccount.AccountNumber" />
+                                <InputText id="accountNumber" class="form-control" @bind-Value="NewAccount.AccountNumber" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">IBAN</label>
-                                <InputText class="form-control" @bind-Value="NewAccount.IBAN" />
+                                <InputText id="iban" class="form-control" @bind-Value="NewAccount.IBAN" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Balance</label>
-                                <InputNumber class="form-control" @bind-Value="NewAccount.Balance" />
+                                <InputNumber id="balance" class="form-control" @bind-Value="NewAccount.Balance" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Currency</label>
-                                <InputText class="form-control" @bind-Value="NewAccount.Currency" />
+                                <InputText id="currency" class="form-control" @bind-Value="NewAccount.Currency" />
                             </div>
                         </div>
 
                         <div>
-                            <button type="submit" class="btn btn-success">Create Account</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CancelCreate">Cancel</button>
+                            <RadzenButton ButtonType="ButtonType.Submit" Text="Create Account" Id="create-account-submit" ButtonStyle="ButtonStyle.Primary" />
+                            <RadzenButton Text="Cancel" Click="CancelCreate" ButtonStyle="ButtonStyle.Secondary" />
                         </div>
                     </EditForm>
                 </div>
@@ -100,16 +98,16 @@ else
                 @foreach (var account in Accounts)
                 {
                     <div class="col-md-6 mb-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">@account.AccountName</h5>
-                                <p class="card-text text-muted">Created: @account.CreatedAt.ToString("dd/MM/yyyy")</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-info" @onclick="() => ViewAccount(account.Id)">View Details</button>
-                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(account.Id)">Delete</button>
+                        <RadzenCard>
+                            <ChildContent>
+                                <h5>@account.AccountName</h5>
+                                <p class="text-muted">Created: @account.CreatedAt.ToString("dd/MM/yyyy")</p>
+                                <div style="display:flex;gap:8px">
+                                    <RadzenButton Size="ButtonSize.Small" Text="View Details" Click="@( () => ViewAccount(account.Id))" Style="background:#0dcaf0;color:#000" />
+                                    <RadzenButton Size="ButtonSize.Small" Text="Delete" ButtonStyle="ButtonStyle.Danger" Click="@( () => DeleteAccount(account.Id))" />
                                 </div>
-                            </div>
-                        </div>
+                            </ChildContent>
+                        </RadzenCard>
                     </div>
                 }
             </div>
@@ -159,7 +157,7 @@ else
                     @if (ShowTransactionCreate)
                     {
                         <div class="mb-3 p-3 bg-light rounded">
-                            <EditForm Model="@NewTransaction" OnValidSubmit="@HandleCreateTransaction">
+                            <EditForm Model="@NewTransaction" OnValidSubmit="@HandleCreateTransaction" FormName="create-transaction-form">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
 

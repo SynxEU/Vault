@@ -8,7 +8,7 @@
 
 <div class="hero-section">
     <div class="container text-center py-5">
-        <h1>🔐 VAULT</h1>
+        <h1>VAULT</h1>
         <p class="lead">Secure Banking System</p>
     </div>
 </div>
@@ -29,24 +29,22 @@
                         </div>
                     }
 
-                    <EditForm Model="@LoginRequest" OnValidSubmit="@HandleLogin" class="needs-validation">
+                    <EditForm Model="@LoginRequest" OnValidSubmit="@HandleLogin" FormName="login-form" class="needs-validation">
                         <DataAnnotationsValidator />
 
                         <div class="mb-4">
                             <label for="username" class="form-label">Username</label>
                             <InputText id="username" class="form-control form-control-lg" @bind-Value="LoginRequest.Username" placeholder="Enter your username" />
-                            <ValidationMessage For="@(() => LoginRequest.Username)" class="d-block mt-2" />
+                            <ValidationMessage For="@(() => LoginRequest.Username)" class="validation-error d-block mt-2" />
                         </div>
 
                         <div class="mb-4">
                             <label for="password" class="form-label">Password</label>
                             <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="LoginRequest.Password" placeholder="Enter your password" />
-                            <ValidationMessage For="@(() => LoginRequest.Password)" class="d-block mt-2" />
+                            <ValidationMessage For="@(() => LoginRequest.Password)" class="validation-error d-block mt-2" />
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
-                            <i class="bi bi-box-arrow-in-right"></i> Login
-                        </button>
+                        <RadzenButton ButtonType="ButtonType.Submit" Text="Login" Style="width:100%" />
                     </EditForm>
 
                     <hr />
@@ -89,4 +87,3 @@
         }
     }
 }
-

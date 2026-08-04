@@ -7,7 +7,7 @@
 
 <div class="hero-section">
     <div class="container text-center py-5">
-        <h1 class="display-3 fw-bold">🔐 VAULT</h1>
+        <h1 class="display-3 fw-bold">VAULT</h1>
         <p class="lead fs-4 mb-5">Secure Bank Account Management System</p>
         
         @if (IsAuthenticated)
@@ -25,12 +25,8 @@
         }
         else
         {
-            <a href="/login" class="btn btn-light btn-lg me-3 fw-bold">
-                <i class="bi bi-box-arrow-in-right"></i> Login
-            </a>
-            <a href="/register" class="btn btn-outline-light btn-lg fw-bold">
-                <i class="bi bi-person-plus"></i> Create Account
-            </a>
+            <RadzenButton Text="Login" Click="@( () => Navigation.NavigateTo("/login"))" Style="margin-right:8px" />
+            <RadzenButton Text="Create Account" ButtonStyle="ButtonStyle.Secondary" Click="@( () => Navigation.NavigateTo("/register"))" />
         }
     </div>
 </div>
@@ -38,40 +34,22 @@
 <div class="container py-5">
     <div class="row">
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header text-white">
-                    <i class="bi bi-shield-lock"></i> Bank-Grade Security
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        All sensitive data including account numbers, balances, and transactions are encrypted using military-grade AES-256 encryption. Your data is protected even if our servers are compromised.
-                    </p>
-                </div>
-            </div>
+            <RadzenCard Style="height:100%">
+                <div style="font-weight:700;margin-bottom:8px;">Bank-Grade Security</div>
+                <p>All sensitive data including account numbers, balances, and transactions are encrypted using military-grade AES-256 encryption. Your data is protected even if our servers are compromised.</p>
+            </RadzenCard>
         </div>
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header text-white">
-                    <i class="bi bi-lock"></i> Secure Passwords
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        Passwords are hashed with BCrypt (workfactor 12), ensuring your login credentials are never stored in plain text. We also use PBKDF2 for key derivation.
-                    </p>
-                </div>
-            </div>
+            <RadzenCard Style="height:100%">
+                <div style="font-weight:700;margin-bottom:8px;">Secure Passwords</div>
+                <p>Passwords are hashed with BCrypt (workfactor 12), ensuring your login credentials are never stored in plain text. We also use PBKDF2 for key derivation.</p>
+            </RadzenCard>
         </div>
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header text-white">
-                    <i class="bi bi-graph-up"></i> Full Control
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        Manage multiple bank accounts, track transactions, update balances, and organize your finances all in one secure place with an intuitive interface.
-                    </p>
-                </div>
-            </div>
+            <RadzenCard Style="height:100%">
+                <div style="font-weight:700;margin-bottom:8px;">Full Control</div>
+                <p>Manage multiple bank accounts, track transactions, update balances, and organize your finances all in one secure place with an intuitive interface.</p>
+            </RadzenCard>
         </div>
     </div>
 
