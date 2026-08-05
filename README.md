@@ -13,14 +13,14 @@ En Blazor Server applikation til sikker styring af bankkonti med kryptering af s
 
 ## Teknologi Stack
 
-| Komponent | Teknologi |
-|-----------|-----------|
-| Framework | .NET 9 med Blazor Server |
-| Database | SQL Server (LocalDB eller Azure) |
+| Komponent | Teknologi                              |
+|-----------|----------------------------------------|
+| Framework | .NET 9 med Blazor Server               |
+| Database | SQL Server (LocalDB eller Azure)       |
 | Kryptering | System.Security.Cryptography (AES-256) |
-| Hashing | BCrypt.Net (workfactor 12) |
-| ORM | Entity Framework Core |
-| Frontend | Razor Components, Bootstrap 5 |
+| Hashing | BCrypt.Net (workfactor 12)             |
+| ORM | Entity Framework Core                  |
+| Frontend | Razor Components, Bootstrap 5 & Radzen |
 
 ## Projekt Struktur
 
@@ -28,6 +28,10 @@ En Blazor Server applikation til sikker styring af bankkonti med kryptering af s
 Vault/
 ├── Vault.Domain/           # Domain models og database context
 │   ├── Entities/
+│   │   ├── Emums/
+│   │   │   ├── AccountType.cs
+│   │   │   ├── TransactionStatus.cs
+│   │   │   └── TransactionType.cs
 │   │   ├── User.cs
 │   │   ├── BankAccount.cs
 │   │   └── Transaction.cs
@@ -38,9 +42,11 @@ Vault/
 │   ├── Interfaces/
 │   │   ├── IAuthenticationService.cs
 │   │   ├── IBankAccountService.cs
+│   │   └── ITransactionService.cs
 │   ├── Services/
 │   │   ├── AuthenticationService.cs
 │   │   ├── BankAccountService.cs
+│   │   └── TransactionService.cs
 │   ├── Security/
 │   │   ├── IEncryptionService.cs
 │   │   ├── EncryptionService.cs
@@ -48,16 +54,27 @@ Vault/
 │   │   └── HashingService.cs
 │   └── DTOs/
 │       ├── AuthDtos.cs
+│       ├── TransactionDtos.cs
 │       └── BankAccountDtos.cs
-├── Vault.Testing/          # E2E & Unit testing
-│   ├── ServiceTests.cs
-│   └── VaultApplicationE2ETests.cs
+├── Vault.Testing/          # Unit
+│   ├── ServiceTests/
+│   │   ├── AuthenticationServiceTests.cs
+│   │   ├── EncryptionServiceTests.cs
+│   │   ├── IHashingServiceTests.cs
+│   │   ├── IHashingServiceTests.cs
+│   │   └── HashingServiceTests.cs
+│   └── BrowserTests/
+│       ├── BrowserManipulationTests.cs
+│       ├── DemoHelper.cs
+│       └── SelectingHTMLElementsTests.cs
 └── Vault/                  # Blazor Web Application
     ├── Components/
     │   ├── Pages/
     │   │   ├── Home.razor
     │   │   ├── Login.razor
     │   │   ├── Register.razor
+    │   │   ├── Logout.razor
+    │   │   ├── BankAccount.razor
     │   │   └── BankAccounts.razor
     │   └── Layout/
     │       ├── MainLayout.razor
