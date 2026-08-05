@@ -1,8 +1,11 @@
 @page "/login"
-@using Microsoft.AspNetCore.Http
+@using Vault.Service.DTOs
+
 @inject IAuthenticationService AuthService
 @inject NavigationManager Navigation
-@inject IHttpContextAccessor HttpContextAccessor
+@inject NotificationService NotificationService
+
+@attribute [ExcludeFromInteractiveRouting]
 
 <PageTitle>Login - Vault</PageTitle>
 
@@ -16,40 +19,50 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-5 col-md-6">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-body p-5">
-                    <h2 class="card-title text-center mb-4">Welcome Back</h2>
-                    
-                    @if (!string.IsNullOrEmpty(ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Login Failed</strong><br/>
-                            @ErrorMessage
-                            <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
-                        </div>
-                    }
-
-                    <EditForm Model="@LoginRequest" OnValidSubmit="@HandleLogin" FormName="login-form" class="needs-validation">
+                    <h2 class="card-title text-center mb-4">
+                        Welcome Back
+                    </h2>
+                    <EditForm
+                        Model="_model"
+                              OnValidSubmit="@HandleLogin"
+                              FormName="Login">
                         <DataAnnotationsValidator />
-
                         <div class="mb-4">
-                            <label for="username" class="form-label">Username</label>
-                            <InputText id="username" class="form-control form-control-lg" @bind-Value="LoginRequest.Username" placeholder="Enter your username" />
-                            <ValidationMessage For="@(() => LoginRequest.Username)" class="validation-error d-block mt-2" />
+                            <label class="form-label">
+                                Username
+                            </label>
+                            <InputText class="form-control form-control-lg"
+                                       @bind-Value="_model.Username"
+                                       placeholder="Enter your username" />
+                            <ValidationMessage For="@(() => _model.Username)"
+                                               class="text-danger" />
                         </div>
-
                         <div class="mb-4">
-                            <label for="password" class="form-label">Password</label>
-                            <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="LoginRequest.Password" placeholder="Enter your password" />
-                            <ValidationMessage For="@(() => LoginRequest.Password)" class="validation-error d-block mt-2" />
-                        </div>
+                            <label class="form-label">
+                                Password
+                            </label>
+                            <InputText type="password"
+                                       class="form-control form-control-lg"
+                                       @bind-Value="_model.Password"
+                                       placeholder="Enter your password" />
 
-                        <RadzenButton ButtonType="ButtonType.Submit" Text="Login" Style="width:100%" />
+                            <ValidationMessage For="@(() => _model.Password)"
+                                               class="text-danger" />
+                        </div>
+                        <RadzenButton ButtonType="ButtonType.Submit"
+                                      Text="Login"
+                                      Icon="login"
+                                      Style="width:100%" />
                     </EditForm>
-
                     <hr />
                     <p class="text-center text-muted mb-0">
-                        Don't have an account? <a href="/register" class="fw-bold text-decoration-none">Sign up here</a>
+                        Don't have an account?
+                        <a href="/register"
+                           class="fw-bold text-decoration-none">
+                            Sign up here
+                        </a>
                     </p>
                 </div>
             </div>
@@ -58,32 +71,37 @@
 </div>
 
 @code {
-    private LoginRequest LoginRequest = new();
-    private string ErrorMessage = string.Empty;
-
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+    
+    [SupplyParameterFromForm]
+    private LoginRequest _model { get; set; } = new();
+    
     private async Task HandleLogin()
     {
-        try
+        Console.WriteLine($"Username: {_model.Username}");
+        Console.WriteLine($"Password: {_model.Password}");
+        
+        AuthResponse response = await AuthService.LoginAsync(_model);
+        
+        if(response.Success)
         {
-            ErrorMessage = string.Empty;
-            var response = await AuthService.LoginAsync(LoginRequest);
+            NotificationService.Notify(
+                NotificationSeverity.Success,
+                "Login",
+                "Welcome back!");
+
+            Navigation.NavigateTo("/", forceLoad: true);
             
-            if (response.Success && response.User != null)
-            {
-                HttpContextAccessor.HttpContext?.Session.SetInt32("UserId", response.User.Id);
-                HttpContextAccessor.HttpContext?.Session.SetString("Username", response.User.Username);
-                HttpContextAccessor.HttpContext?.Session.SetString("Email", response.User.Email);
-                
-                Navigation.NavigateTo("/accounts");
-            }
-            else
-            {
-                ErrorMessage = response.Message ?? "Login failed. Please check your credentials.";
-            }
         }
-        catch (Exception ex)
+        else
         {
-            ErrorMessage = $"An error occurred: {ex.Message}";
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Login failed",
+                 response.Message ?? "Failed");
         }
+
     }
+
 }

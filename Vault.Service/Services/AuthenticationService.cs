@@ -1,118 +1,114 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Vault.Domain.Entities;
-using Vault.Domain.Persistence;
 using Vault.Service.DTOs;
 using Vault.Service.Interfaces;
 using Vault.Service.Security;
 
 namespace Vault.Service.Services;
 
-/// <summary>
-/// Implementation of authentication service
-/// </summary>
 public class AuthenticationService : IAuthenticationService
 {
-    private readonly VaultDbContext _dbContext;
-    private readonly IHashingService _hashingService;
+    private readonly UserManager<User> _userManager;
+    private readonly SignInManager<User> _signInManager;
     private readonly IEncryptionService _encryptionService;
 
+
     public AuthenticationService(
-        VaultDbContext dbContext,
-        IHashingService hashingService,
+        UserManager<User> userManager,
+        SignInManager<User> signInManager,
         IEncryptionService encryptionService)
     {
-        _dbContext = dbContext;
-        _hashingService = hashingService;
+        _userManager = userManager;
+        _signInManager = signInManager;
         _encryptionService = encryptionService;
     }
-
+    
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
         try
         {
             ArgumentNullException.ThrowIfNull(request);
-
-            // Validation
-            if (string.IsNullOrWhiteSpace(request.Username))
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Username is required" 
-                };
-
-            if (string.IsNullOrWhiteSpace(request.Email))
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Email is required" 
-                };
-
-            if (string.IsNullOrWhiteSpace(request.Password))
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Password is required" 
-                };
-
+            
             if (request.Password != request.ConfirmPassword)
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Passwords do not match" 
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Passwords do not match"
                 };
-
-            if (request.Password.Length < 8)
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Password must be at least 8 characters long" 
-                };
-
-            // Check if username or email already exists
-            var existingUser = await _dbContext.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Email);
-
+            }
+            
+            var existingUser =
+                await _userManager.FindByNameAsync(request.Username);
+            
             if (existingUser != null)
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Username or email already exists" 
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Username already exists"
                 };
-
-            // Hash password
-            var passwordHash = _hashingService.HashPassword(request.Password);
-
-            // Derive encryption key from password
-            var (_, salt) = _encryptionService.DeriveKeyFromPassword(request.Password);
-
-            // Create new user
+            }
+            
+            var existingEmail =
+                await _userManager.FindByEmailAsync(request.Email);
+            
+            if (existingEmail != null)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Email already exists"
+                };
+            }
+            
+            // Generate encryption salt for bank data
+            var (_, salt) =
+                _encryptionService.DeriveKeyFromPassword(
+                    request.Password);
+            
             var user = new User
             {
-                Username = request.Username,
+                UserName = request.Username,
                 Email = request.Email,
-                PasswordHash = passwordHash,
-                EncryptionKeyHash = salt, // Store the salt for later key derivation
+
+                EncryptionKeyHash = salt,
+
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
-
+            
+            var result =
+                await _userManager.CreateAsync(
+                    user,
+                    request.Password);
+            
+            if (!result.Succeeded)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = string.Join(
+                        ", ",
+                        result.Errors.Select(x => x.Description))
+                };
+            }
+            
             return new AuthResponse
             {
                 Success = true,
                 Message = "User registered successfully",
+
                 User = new UserDto
                 {
                     Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
+                    Username = user.UserName!,
+                    Email = user.Email!,
                     CreatedAt = user.CreatedAt
                 }
             };
         }
-        catch (Exception ex)
+        catch(Exception ex)
         {
             return new AuthResponse
             {
@@ -128,53 +124,50 @@ public class AuthenticationService : IAuthenticationService
         {
             ArgumentNullException.ThrowIfNull(request);
 
-            if (string.IsNullOrWhiteSpace(request.Username))
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Username is required" 
-                };
+            var user = await _userManager.FindByNameAsync(request.Username);
 
-            if (string.IsNullOrWhiteSpace(request.Password))
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Password is required" 
+            if(user == null)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Invalid username or password"
                 };
+            }
 
-            var user = await _dbContext.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
+            var result = await _signInManager.PasswordSignInAsync(
+                user,
+                request.Password,
+                isPersistent: true,
+                lockoutOnFailure: false);
 
-            if (user == null)
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid username or password" 
+
+            if(!result.Succeeded)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Invalid username or password"
                 };
+            }
 
-            // Verify password
-            var passwordValid = _hashingService.VerifyPassword(request.Password, user.PasswordHash);
-            if (!passwordValid)
-                return new AuthResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid username or password" 
-                };
 
             return new AuthResponse
             {
                 Success = true,
                 Message = "Login successful",
+
                 User = new UserDto
                 {
                     Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
+                    Username = user.UserName!,
+                    Email = user.Email!,
                     CreatedAt = user.CreatedAt
                 }
             };
+
         }
-        catch (Exception ex)
+        catch(Exception ex)
         {
             return new AuthResponse
             {
@@ -183,15 +176,17 @@ public class AuthenticationService : IAuthenticationService
             };
         }
     }
-
-    public async Task<User?> GetUserAsync(int userId)
+    
+    public async Task<User?> GetUserAsync(Guid userId)
     {
-        return await _dbContext.Users.FindAsync(userId);
+        return await _userManager.FindByIdAsync(
+            userId.ToString());
     }
-
+    
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
-        return await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+        return await _userManager.FindByNameAsync(username);
     }
 }

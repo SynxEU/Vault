@@ -1,7 +1,9 @@
 ﻿@page "/"
-@using Microsoft.AspNetCore.Http
-@inject IHttpContextAccessor HttpContextAccessor
+@using System.Security.Claims
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
 
 <PageTitle>Vault - Secure Banking</PageTitle>
 
@@ -9,25 +11,33 @@
     <div class="container text-center py-5">
         <h1 class="display-3 fw-bold">VAULT</h1>
         <p class="lead fs-4 mb-5">Secure Bank Account Management System</p>
-        
-        @if (IsAuthenticated)
-        {
-            <div class="mb-4">
-                <p class="fs-5">Welcome, <strong>@Username</strong>!</p>
-                <p class="text-white-50">Email: @Email</p>
-            </div>
-            <a href="/accounts" class="btn btn-light btn-lg me-3 fw-bold">
-                <i class="bi bi-safe2"></i> My Accounts
-            </a>
-            <a href="/register" class="btn btn-outline-light btn-lg fw-bold">
-                <i class="bi bi-info-circle"></i> About
-            </a>
-        }
-        else
-        {
-            <RadzenButton Text="Login" Click="@( () => Navigation.NavigateTo("/login"))" Style="margin-right:8px" />
-            <RadzenButton Text="Create Account" ButtonStyle="ButtonStyle.Secondary" Click="@( () => Navigation.NavigateTo("/register"))" />
-        }
+        <AuthorizeView>
+            <Authorized>
+                <div class="mb-4">
+                    <p class="fs-5">
+                        Welcome,
+                        <strong>@context.User.Identity?.Name</strong>!
+                    </p>
+                    <p class="text-white-50">
+                        Email: @context.User.FindFirst(ClaimTypes.Email)?.Value
+                    </p>
+                </div>
+                <a href="/accounts" class="btn btn-light btn-lg me-3 fw-bold">
+                    <i class="bi bi-safe2"></i>
+                    My Accounts
+                </a>
+            </Authorized>
+
+            <NotAuthorized>
+                <RadzenButton Text="Login"
+                              Icon="login"
+                              Click="@GoToLogin" />
+                <RadzenButton Text="Create Account"
+                              Icon="person_add"
+                              ButtonStyle="ButtonStyle.Primary"
+                              Click="@GoToRegister" />
+            </NotAuthorized>
+        </AuthorizeView>
     </div>
 </div>
 
@@ -117,16 +127,35 @@
 </div>
 
 @code {
-    private bool IsAuthenticated = false;
-    private string? Username;
-    private string? Email;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var userId = HttpContextAccessor.HttpContext?.Session.GetInt32("UserId");
-        Username = HttpContextAccessor.HttpContext?.Session.GetString("Username");
-        Email = HttpContextAccessor.HttpContext?.Session.GetString("Email");
-        IsAuthenticated = userId.HasValue && userId > 0;
+        var authState = await Task.FromResult(
+            await AuthenticationStateProvider.GetAuthenticationStateAsync()
+        );
+
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            NotificationService.Notify(
+                NotificationSeverity.Success,
+                "Welcome back",
+                $"Welcome {authState.User.Identity.Name}!",
+                duration: 3000
+            );
+        }
     }
+
+
+    void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+
+    void GoToRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+
 }
 

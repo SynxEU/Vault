@@ -8,8 +8,11 @@ namespace Vault.Service.Interfaces;
 /// </summary>
 public interface IAuthenticationService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request);
     Task<AuthResponse> LoginAsync(LoginRequest request);
-    Task<User?> GetUserAsync(int userId);
+
+    Task<AuthResponse> RegisterAsync(RegisterRequest request);
+
+    Task<User?> GetUserAsync(Guid userId);
+
     Task<User?> GetUserByUsernameAsync(string username);
 }

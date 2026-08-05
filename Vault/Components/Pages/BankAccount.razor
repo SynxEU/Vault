@@ -1,0 +1,339 @@
+@page "/accounts/{id:guid}"
+
+@using System.Security.Claims
+@using Vault.Domain.Entities.Enums
+
+@inject IBankAccountService BankAccountService
+@inject ITransactionService TransactionService
+@inject NotificationService NotificationService
+@inject IJSRuntime JS
+
+@rendermode InteractiveServer
+
+<PageTitle>@(Account?.AccountName ?? "Account") - Vault</PageTitle>
+
+<AuthorizeView>
+    <Authorized Context="authContext">
+        @if(Account == null)
+        {
+            <div class="container py-5">
+                <p>
+                    Loading account...
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="container py-5">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2>
+                            @Account.AccountName
+                        </h2>
+                        <small class="text-muted">
+                            @Account.AccountType
+                        </small>
+                    </div>
+                    <button class="btn btn-primary"
+                            @onclick="ToggleTransactionForm">
+                        New Transaction
+                    </button>
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>
+                        Account Information
+                    </h5>
+                    <hr/>
+                    <p>
+                        <strong>Bank:</strong>
+                        @Account.BankName
+                    </p>
+                    <p>
+                        <strong>Account Number:</strong>
+                        @Account.AccountNumber
+                    </p>
+                    <p>
+                        <strong>IBAN:</strong>
+                        @Account.IBAN
+                    </p>
+                    <p>
+                        <strong>Balance:</strong>
+                        @Account.Balance
+                        @Account.Currency
+                    </p>
+                </div>
+            </div>
+            @if(ShowTransactionForm)
+            {
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5>
+                            Create Transaction
+                        </h5>
+                        <EditForm Model="@NewTransaction"
+                                  OnValidSubmit="CreateTransaction">
+                            <DataAnnotationsValidator/>
+                            <ValidationSummary/>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Description
+                                </label>
+                                <InputText class="form-control"
+                                           @bind-Value="NewTransaction.Description"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Amount
+                                </label>
+                                <InputNumber class="form-control"
+                                             @bind-Value="NewTransaction.Amount"/>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Type
+                                </label>
+                                <InputSelect class="form-select"
+                                             @bind-Value="NewTransaction.Type">
+                                    @foreach(var type in Enum.GetValues<TransactionType>())
+                                    {
+                                        <option value="@type">
+                                            @type
+                                        </option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <h6>
+                                Recipient Information
+                            </h6>
+                            <div class="mb-3">
+                                <InputText class="form-control"
+                                           placeholder="Recipient name"
+                                           @bind-Value="NewTransaction.RecipientName"/>
+
+                            </div>
+                            <div class="mb-3">
+                                <InputText class="form-control"
+                                           placeholder="Registration number"
+                                           @bind-Value="NewTransaction.RecipientRegistrationNumber"/>
+
+                            </div>
+                            <div class="mb-3">
+                                <InputText class="form-control"
+                                           placeholder="Account number"
+                                           @bind-Value="NewTransaction.RecipientAccountNumber"/>
+                            </div>
+                            <button class="btn btn-success">
+                                Create
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+            <div class="card">
+                <div class="card-body">
+                    <h5>
+                        Transaction History
+                    </h5>
+                    <hr/>
+                    @if(Transactions.Count == 0)
+                    {
+                        <p class="text-muted">
+                            No transactions yet.
+                        </p>
+                    }
+                    else
+                    {
+                        foreach(var transaction in Transactions)
+                        {
+                            <div class="border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>
+                                            @transaction.Description
+                                        </strong>
+                                        <br/>
+                                        <small>
+                                            @transaction.TransactionDate.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <strong>
+                                            @transaction.Amount
+                                        </strong>
+                                        <br/>
+                                        <span>
+                                            @transaction.Type
+                                        </span>
+                                    </div>
+                                </div>
+
+                                @if(!string.IsNullOrWhiteSpace(transaction.RecipientName))
+                                {
+                                    <hr/>
+                                    <p>
+                                        Recipient:
+                                        @transaction.RecipientName
+                                    </p>
+                                }
+                                
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => DeleteTransaction(transaction.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <div class="container py-5">
+            <div class="alert alert-warning">
+                Please login first.
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public Guid id { get; set; }
+    
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+    
+    private Guid UserId;
+    private BankAccountDetailDto? Account;
+    private List<TransactionDto> Transactions = new();
+    private bool ShowTransactionForm;
+    private CreateTransactionRequest NewTransaction = new()
+    {
+        Type = TransactionType.Debit
+    };
+    protected override async Task OnInitializedAsync()
+    {
+        var state =
+            await AuthenticationStateTask;
+        
+        var claim =
+            state.User.FindFirst(
+                ClaimTypes.NameIdentifier);
+        
+        if(claim != null)
+        {
+            UserId =
+                Guid.Parse(claim.Value);
+        }
+        await LoadAccount();
+
+    }
+    
+    private async Task LoadAccount()
+    {
+
+        var accountResponse =
+            await BankAccountService.GetAccountAsync(
+                UserId,
+                id);
+        
+        if(accountResponse.Success)
+        {
+            Account =
+                accountResponse.Data;
+        }
+        
+        var transactionResponse =
+            await TransactionService.GetAccountTransactionsAsync(
+                UserId,
+                id);
+        
+        if(transactionResponse.Success)
+        {
+            Transactions =
+                transactionResponse.Data ?? new();
+        }
+
+    }
+
+    private void ToggleTransactionForm()
+    {
+        ShowTransactionForm =
+            !ShowTransactionForm;
+    }
+    
+    private async Task CreateTransaction()
+    {
+        NewTransaction.BankAccountId =
+            id;
+
+        var response =
+            await TransactionService.CreateTransactionAsync(
+                UserId,
+                NewTransaction);
+
+        if(response.Success)
+        {
+            ShowSuccess(
+                "Transaction created");
+            
+            NewTransaction =
+                new()
+                {
+                    Type = TransactionType.Debit
+                };
+            
+            ShowTransactionForm = false;
+            
+            await LoadAccount();
+        }
+        else
+        {
+            ShowError(response.Message);
+        }
+
+    }
+    
+    private async Task DeleteTransaction(Guid transactionId)
+    {
+        if(await JS.InvokeAsync<bool>(
+            "confirm",
+            "Delete transaction?"))
+        {
+            var response =
+                await TransactionService.DeleteTransactionAsync(
+                    UserId,
+                    transactionId);
+            if(response.Success)
+            {
+                await LoadAccount();
+            }
+            else
+            {
+                ShowError(response.Message);
+            }
+
+        }
+
+    }
+    
+    private void ShowError(string message)
+    {
+        NotificationService.Notify(
+            NotificationSeverity.Error,
+            "Error",
+            message,
+            4000);
+    }
+    
+    private void ShowSuccess(string message)
+    {
+        NotificationService.Notify(
+            NotificationSeverity.Success,
+            "Success",
+            message,
+            4000);
+    }
+}
