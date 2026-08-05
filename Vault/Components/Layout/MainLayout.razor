@@ -1,28 +1,35 @@
 @inherits LayoutComponentBase
+<RadzenComponents />
+<RadzenDialog />
+<RadzenNotification />
+<RadzenTooltip />
 
 <header>
     <NavMenu />
 </header>
 
-<main class="main-content">
-    <div class="container">
-        <article class="content px-4">
-            @Body
-        </article>
-    </div>
-</main>
 
-<footer style="background:#f8f9fa;padding:1.5rem;margin-top:2rem;border-top:1px solid #e9ecef;">
-    <div class="container">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-            <div style="font-weight:600;color:#333;">Vault &copy; @(DateTime.Now.Year)</div>
-            <div style="color:#666">Built with Radzen &amp; .NET</div>
+<div class="page-wrapper">
+    <main class="main-content">
+        <div class="container">
+            <article class="content px-4">
+                @Body
+            </article>
         </div>
-    </div>
-</footer>
+    </main>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">×</span>
+    <footer class="footer">
+        <div class="container text-center">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                <div style="font-weight:600;color:#333;">Vault &copy; @(DateTime.Now.Year)</div>
+                <div style="color:#666">Built with Radzen &amp; .NET</div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="blazor-error-ui" data-nosnippet>
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">×</span>
+    </div>
 </div>

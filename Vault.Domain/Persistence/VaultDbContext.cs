@@ -1,12 +1,12 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Vault.Domain.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Vault.Domain.Persistence;
 
-/// <summary>
-/// Entity Framework DbContext for Vault application
-/// </summary>
-public class VaultDbContext : DbContext
+public class VaultDbContext 
+    : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
     public VaultDbContext(DbContextOptions<VaultDbContext> options)
         : base(options)
@@ -26,7 +26,7 @@ public class VaultDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.Username)
+            entity.Property(e => e.UserName)
                 .IsRequired()
                 .HasMaxLength(100);
 
@@ -46,7 +46,7 @@ public class VaultDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
 
-            entity.HasIndex(e => e.Username)
+            entity.HasIndex(e => e.UserName)
                 .IsUnique();
 
             entity.HasIndex(e => e.Email)
@@ -66,7 +66,15 @@ public class VaultDbContext : DbContext
             entity.Property(e => e.AccountName)
                 .IsRequired()
                 .HasMaxLength(255);
-
+            
+            // Store enum as number in database
+            entity.Property(e => e.AccountType)
+                .HasConversion<int>()
+                .IsRequired();
+            
+            entity.Property(e => e.EncryptedRegistrationNumber)
+                .IsRequired();
+            
             entity.Property(e => e.EncryptedAccountNumber)
                 .IsRequired();
 
@@ -98,19 +106,25 @@ public class VaultDbContext : DbContext
         modelBuilder.Entity<Transaction>(entity =>
         {
             entity.HasKey(e => e.Id);
-
+            
+            entity.Property(e => e.Type)
+                .HasConversion<int>()
+                .IsRequired();
+            
+            entity.Property(e => e.Status)
+                .HasConversion<int>()
+                .IsRequired();
+            
             entity.Property(e => e.EncryptedDescription)
                 .IsRequired();
-
+            
             entity.Property(e => e.EncryptedAmount)
                 .IsRequired();
-
-            entity.Property(e => e.EncryptedType)
-                .IsRequired()
-                .HasMaxLength(50);
-
-            entity.Property(e => e.EncryptedRecipient);
-
+            
+            entity.Property(e => e.EncryptedRecipientName);
+            entity.Property(e => e.EncryptedRecipientAccountNumber);
+            entity.Property(e => e.EncryptedRecipientRegistrationNumber);
+            
             entity.Property(e => e.TransactionDate)
                 .HasDefaultValueSql("GETUTCDATE()");
 

@@ -1,117 +1,159 @@
 @page "/register"
-@using Microsoft.AspNetCore.Http
-@using System.Diagnostics
 @inject IAuthenticationService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
-@inject IHttpContextAccessor HttpContextAccessor
+@inject NotificationService NotificationService
+@rendermode InteractiveServer
 
 <PageTitle>Register - Vault</PageTitle>
 
-<div class="hero-section">
-    <div class="container text-center py-5">
-        <h1>VAULT</h1>
-        <p class="lead">Secure Banking System</p>
-    </div>
-</div>
+<AuthorizeView>
+    <Authorized>
+        <div class="container py-5">
+            <div class="alert alert-info text-center">
+                You are already logged in.
+                <br />
+                Redirecting to home...
+            </div>
+        </div>
+    </Authorized>
+    
+    <NotAuthorized Context="auth">
+        <div class="hero-section">
+            <div class="container text-center py-5">
+                <h1>
+                    VAULT
+                </h1>
+                <p class="lead">
+                    Secure Banking System
+                </p>
+            </div>
+        </div>
+        
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-5 col-md-6">
+                    <div class="card shadow">
+                        <div class="card-body p-5">
+                            <h2 class="card-title text-center mb-4">
+                                Create Account
+                            </h2>
+                            
+                            <EditForm Model="RegisterRequest"
+                                      OnValidSubmit="HandleRegister">
+                                <DataAnnotationsValidator />
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Username
+                                    </label>
+                                    <InputText class="form-control form-control-lg"
+                                               @bind-Value="RegisterRequest.Username" />
+                                    <ValidationMessage For="@(() => RegisterRequest.Username)" />
+                                </div>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-5 col-md-6">
-            <div class="card">
-                <div class="card-body p-5">
-                    <h2 class="card-title text-center mb-4">Create Account</h2>
-                    
-                    @if (!string.IsNullOrEmpty(ErrorMessage))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <strong>Registration Failed</strong><br/>
-                            @ErrorMessage
-                            <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Email
+                                    </label>
+                                    <InputText type="email"
+                                               class="form-control form-control-lg"
+                                               @bind-Value="RegisterRequest.Email" />
+                                    <ValidationMessage For="@(() => RegisterRequest.Email)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Password
+                                    </label>
+                                    <InputText type="password"
+                                               class="form-control form-control-lg"
+                                               @bind-Value="RegisterRequest.Password" />
+                                    <ValidationMessage For="@(() => RegisterRequest.Password)" />
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        Confirm Password
+                                    </label>
+                                    <InputText type="password"
+                                               class="form-control form-control-lg"
+                                               @bind-Value="RegisterRequest.ConfirmPassword" />
+                                    <ValidationMessage For="@(() => RegisterRequest.ConfirmPassword)" />
+                                </div>
+                                
+                                <RadzenButton id="create-account-button"
+                                              ButtonType="ButtonType.Submit"
+                                              Text="Create Account"
+                                              Icon="person_add"
+                                              Disabled="@IsBusy"
+                                              IsBusy="@IsBusy"
+                                              BusyText="Creating..."
+                                              Style="width:100%" />
+                            </EditForm><hr />
+                            
+                            <p class="text-center text-muted">
+                                Already have an account?
+                            </p>
+                            
+                            <RadzenButton Text="Login"
+                                          Variant="Variant.Text"
+                                          Click="@GoToLogin" />
                         </div>
-                    }
-
-                    @if (Success)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <strong>Success!</strong><br/>
-                            Account created successfully. Redirecting to login...
-                        </div>
-                    }
-                    else
-                    {
-                        <EditForm Model="@RegisterRequest" OnValidSubmit="@HandleRegister" FormName="register-form" class="needs-validation">
-                            <DataAnnotationsValidator />
-
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                <InputText id="username" class="form-control form-control-lg" @bind-Value="RegisterRequest.Username" @bind-Value:event="oninput" placeholder="Choose a username" />
-                                <ValidationMessage For="@(() => RegisterRequest.Username)" class="validation-error d-block mt-2" />
-                                <small class="text-muted">3-20 characters, alphanumeric only</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email Address</label>
-                                <InputText id="email" type="email" class="form-control form-control-lg" @bind-Value="RegisterRequest.Email" @bind-Value:event="oninput" placeholder="your@email.com" />
-                                <ValidationMessage For="@(() => RegisterRequest.Email)" class="validation-error d-block mt-2" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
-                                <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.Password" @bind-Value:event="oninput" placeholder="Minimum 8 characters" />
-                                <ValidationMessage For="@(() => RegisterRequest.Password)" class="validation-error d-block mt-2" />
-                                <small class="text-muted">Min 8 chars, mix of letters, numbers & symbols recommended</small>
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="confirmPassword" class="form-label">Confirm Password</label>
-                                <InputText id="confirmPassword" type="password" class="form-control form-control-lg" @bind-Value="RegisterRequest.ConfirmPassword" @bind-Value:event="oninput" placeholder="Re-enter password" />
-                                <ValidationMessage For="@(() => RegisterRequest.ConfirmPassword)" class="validation-error d-block mt-2" />
-                            </div>
-
-                            <RadzenButton ButtonType="ButtonType.Submit" Text="Create Account" Style="width:100%" />
-                        </EditForm>
-
-                        <hr />
-                        <p class="text-center text-muted mb-0">
-                            Already have an account? <a href="/login" class="fw-bold text-decoration-none">Sign in here</a>
-                        </p>
-                    }
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </NotAuthorized>
+</AuthorizeView>
 
-@code {
-    private RegisterRequest RegisterRequest = new();
-    private string ErrorMessage = string.Empty;
-    private bool Success = false;
-
+@code
+{
+    private readonly RegisterRequest RegisterRequest = new();
+    private bool IsBusy;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState =
+            await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if(authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/", true);
+        }
+    }
+    
     private async Task HandleRegister()
     {
-        try
+        if(IsBusy)
+            return;
+        IsBusy = true;
+        var response =
+            await AuthService.RegisterAsync(RegisterRequest);
+        
+        if(!response.Success)
         {
-            ErrorMessage = string.Empty;
-
-            // Log current model state to help debug client-side binding issues
-            Debug.WriteLine($"[Register] Username='{RegisterRequest.Username}', Email='{RegisterRequest.Email}', PasswordLen={RegisterRequest.Password?.Length}, ConfirmLen={RegisterRequest.ConfirmPassword?.Length}");
-
-            var response = await AuthService.RegisterAsync(RegisterRequest);
-            
-            if (response.Success)
-            {
-                Success = true;
-                await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
-            }
-            else
-            {
-                ErrorMessage = response.Message ?? "Registration failed. Please try again.";
-            }
+            NotificationService.Notify(
+                NotificationSeverity.Error,
+                "Registration Failed",
+                response.Message ?? "Registration failed."
+            );
+            IsBusy = false;
+            return;
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"An error occurred: {ex.Message}";
-        }
+        
+        NotificationService.Notify(
+            NotificationSeverity.Success,
+            "Success",
+            "Account created successfully."
+        );
+        
+        await Task.Delay(1500);
+        
+        Navigation.NavigateTo("/login");
+
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
     }
 }

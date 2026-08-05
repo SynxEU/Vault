@@ -1,40 +1,66 @@
-@using Microsoft.AspNetCore.Http
-@inject IHttpContextAccessor HttpContextAccessor
+@rendermode InteractiveServer
+
 @inject NavigationManager Navigation
 
-<div style="background:#212529;color:white;padding:0.5rem 1rem;display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-weight:700;font-size:1.25rem">Vault</div>
-    <div>
-        <RadzenButton Text="Home" Style="margin-right:8px" Click="@( () => Navigation.NavigateTo("/"))" />
-        @if (IsAuthenticated)
-        {
-            <RadzenButton Text="My Accounts" Style="margin-right:8px" Click="@( () => Navigation.NavigateTo("/accounts"))" />
-            <span style="margin-right:8px">@Username</span>
-            <RadzenButton Text="Logout" ButtonStyle="ButtonStyle.Light" Click="Logout" />
-        }
-        else
-        {
-            <RadzenButton Text="Login" Style="margin-right:8px" Click="@( () => Navigation.NavigateTo("/login"))" />
-            <RadzenButton Text="Register" Click="@( () => Navigation.NavigateTo("/register"))" />
-        }
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold fs-4"
+           href="/">
+            Vault
+        </a>
+        <div class="d-flex align-items-center gap-2">
+            <RadzenButton Text="Home"
+                          Icon="home"
+                          ButtonStyle="ButtonStyle.Light"
+                          Click="@GoHome" />
+            <AuthorizeView>
+                <Authorized>
+                    <RadzenButton Text="My Accounts"
+                                  Icon="account_balance"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Click="@GoAccounts" />
+                    <span class="text-white fw-semibold px-2">
+                        @context.User.Identity?.Name
+                    </span>
+                    <RadzenButton Text="Logout"
+                                  Icon="logout"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@Logout" />
+                </Authorized>
+                <NotAuthorized>
+                    <RadzenButton Text="Login"
+                                  Icon="login"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Click="@GoLogin" />
+                    <RadzenButton Text="Register"
+                                  Icon="person_add"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Click="@GoRegister" />
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
     </div>
-</div>
+</nav>
 
 @code {
-    private bool IsAuthenticated = false;
-    private string? Username;
-
-    protected override void OnInitialized()
+    private void GoHome()
     {
-        var userId = HttpContextAccessor.HttpContext?.Session.GetInt32("UserId");
-        Username = HttpContextAccessor.HttpContext?.Session.GetString("Username");
-        IsAuthenticated = userId.HasValue && userId > 0;
-    }
-
-    private void Logout()
-    {
-        HttpContextAccessor.HttpContext?.Session.Clear();
         Navigation.NavigateTo("/");
     }
+    private void GoAccounts()
+    {
+        Navigation.NavigateTo("/accounts");
+    }
+    private void GoLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+    private void GoRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+    private void Logout()
+    {
+        Navigation.NavigateTo("/logout", true);
+    }
 }
-

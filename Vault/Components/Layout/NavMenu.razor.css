@@ -1,33 +1,13 @@
+body {
+    background-color: #f8f9fa;
+}
+
+
 .navbar {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-height: 64px;
 }
 
-.navbar-brand {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff !important;
-}
 
-.navbar-nav .nav-link {
-    color: rgba(255, 255, 255, 0.8) !important;
-    margin: 0 0.5rem;
-    transition: color 0.3s ease;
-}
-
-.navbar-nav .nav-link:hover {
-    color: #fff !important;
-}
-
-.navbar-nav .nav-link.active {
-    color: #fff !important;
-    font-weight: 600;
-}
-
-.navbar-nav .logout-btn {
-    padding: 0 !important;
-    border: none !important;
-}
-
-.navbar-nav .logout-btn:hover {
-    text-decoration: underline;
+.radzen-button {
+    border-radius: 8px;
 }
