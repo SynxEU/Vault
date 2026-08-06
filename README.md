@@ -292,8 +292,6 @@ Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId
 - [ ] Multiple currencies support
 - [ ] Recurring transactions
 - [ ] Budget tracking
-- [ ] Fiks opdatering af user
-- [ ] Fiks opdatering af bankkonti
 
 ## Licens
 

@@ -10,7 +10,7 @@
 
 @rendermode InteractiveServer
 
-<PageTitle>@(Account?.AccountName ?? "Account") - Vault</PageTitle>
+<PageTitle>@(Account?.AccountName ?? "Account")</PageTitle>
 
 <AuthorizeView>
     <Authorized Context="authContext">
@@ -34,161 +34,284 @@
                             @Account.AccountType
                         </small>
                     </div>
-                    <button class="btn btn-primary"
-                            @onclick="ToggleTransactionForm">
-                        New Transaction
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary"
+                                @onclick="ToggleEditAccount">
+                            Edit Account
+                        </button>
+                        <button class="btn btn-primary"
+                                @onclick="ToggleTransactionForm">
+                            New Transaction
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5>
-                        Account Information
-                    </h5>
-                    <hr/>
-                    <p>
-                        <strong>Bank:</strong>
-                        @Account.BankName
-                    </p>
-                    <p>
-                        <strong>Account Number:</strong>
-                        @Account.AccountNumber
-                    </p>
-                    <p>
-                        <strong>IBAN:</strong>
-                        @Account.IBAN
-                    </p>
-                    <p>
-                        <strong>Balance:</strong>
-                        @Account.Balance
-                        @Account.Currency
-                    </p>
-                </div>
-            </div>
-            @if(ShowTransactionForm)
-            {
                 <div class="card mb-4">
                     <div class="card-body">
                         <h5>
-                            Create Transaction
+                            Account Information
                         </h5>
-                        <EditForm Model="@NewTransaction"
-                                  OnValidSubmit="CreateTransaction">
-                            <DataAnnotationsValidator/>
-                            <ValidationSummary/>
-                            <div class="mb-3">
-                                <label class="form-label">
-                                    Description
-                                </label>
-                                <InputText class="form-control"
-                                           @bind-Value="NewTransaction.Description"/>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">
-                                    Amount
-                                </label>
-                                <InputNumber class="form-control"
-                                             @bind-Value="NewTransaction.Amount"/>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">
-                                    Type
-                                </label>
-                                <InputSelect class="form-select"
-                                             @bind-Value="NewTransaction.Type">
-                                    @foreach(var type in Enum.GetValues<TransactionType>())
-                                    {
-                                        <option value="@type">
-                                            @type
-                                        </option>
-                                    }
-                                </InputSelect>
-                            </div>
-                            <h6>
-                                Recipient Information
-                            </h6>
-                            <div class="mb-3">
-                                <InputText class="form-control"
-                                           placeholder="Recipient name"
-                                           @bind-Value="NewTransaction.RecipientName"/>
+                        <hr/>
+                        @if(ShowEditAccountForm)
+                        {
+                            <EditForm Model="@EditAccount"
+                                      OnValidSubmit="UpdateAccount">
 
-                            </div>
-                            <div class="mb-3">
-                                <InputText class="form-control"
-                                           placeholder="Registration number"
-                                           @bind-Value="NewTransaction.RecipientRegistrationNumber"/>
+                                <DataAnnotationsValidator/>
+                                <ValidationSummary/>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Account Name
+                                    </label>
+                                    <InputText class="form-control"
+                                               @bind-Value="EditAccount.AccountName"/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Account Type
+                                    </label>
+                                    <InputSelect class="form-select"
+                                                 @bind-Value="EditAccount.AccountType">
+                                        @foreach(var type in Enum.GetValues<AccountType>())
+                                        {
+                                            <option value="@type">
+                                                @type
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Balance
+                                    </label>
+                                    <InputNumber class="form-control"
+                                                 @bind-Value="EditAccount.Balance"/>
+                                </div>
+                                <button class="btn btn-success">
+                                    Save
+                                </button>
+                                <button type="button"
+                                        class="btn btn-secondary ms-2"
+                                        @onclick="ToggleEditAccount">
+                                    Cancel
+                                </button>
 
-                            </div>
-                            <div class="mb-3">
-                                <InputText class="form-control"
-                                           placeholder="Account number"
-                                           @bind-Value="NewTransaction.RecipientAccountNumber"/>
-                            </div>
-                            <button class="btn btn-success">
-                                Create
-                            </button>
-                        </EditForm>
+                            </EditForm>
+                        }
+                        else
+                        {
+                            <p>
+                                <strong>
+                                    Bank:
+                                </strong>
+                                @Account.BankName
+                            </p>
+                            <p>
+                                <strong>
+                                    Account Number:
+                                </strong>
+                                @Account.AccountNumber
+                            </p>
+                            <p>
+                                <strong>
+                                    IBAN:
+                                </strong>
+                                @Account.IBAN
+                            </p>
+                            <p>
+                                <strong>
+                                    Balance:
+                                </strong>
+                                @Account.Balance
+                                @Account.Currency
+                            </p>
+                        }
                     </div>
                 </div>
-            }
-            <div class="card">
-                <div class="card-body">
-                    <h5>
-                        Transaction History
-                    </h5>
-                    <hr/>
-                    @if(Transactions.Count == 0)
-                    {
-                        <p class="text-muted">
-                            No transactions yet.
-                        </p>
-                    }
-                    else
-                    {
-                        foreach(var transaction in Transactions)
-                        {
-                            <div class="border rounded p-3 mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <strong>
-                                            @transaction.Description
-                                        </strong>
-                                        <br/>
-                                        <small>
-                                            @transaction.TransactionDate.ToString("dd/MM/yyyy HH:mm")
-                                        </small>
-                                    </div>
-                                    <div>
-                                        @{
-                                            var textClass = transaction.Type is TransactionType.Deposit or TransactionType.Received
-                                                ? "text-success"
-                                                : "text-danger";
-                                        }
-
-                                        <strong class="@textClass">@transaction.Amount</strong>
-                                        <br/>
-                                        <span>
-                                            @transaction.Type
-                                        </span>
-                                    </div>
+                @if(ShowTransactionForm)
+                {
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5>
+                                Create Transaction
+                            </h5>
+                            <EditForm Model="@NewTransaction"
+                                      OnValidSubmit="CreateTransaction">
+                                <DataAnnotationsValidator/>
+                                <ValidationSummary/>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Description
+                                    </label>
+                                    <InputText class="form-control"
+                                               @bind-Value="NewTransaction.Description"/>
                                 </div>
-
-                                @if(!string.IsNullOrWhiteSpace(transaction.RecipientName))
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Amount
+                                    </label>
+                                    <InputNumber class="form-control"
+                                                 @bind-Value="NewTransaction.Amount"/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Type
+                                    </label>
+                                    <InputSelect class="form-select"
+                                                 @bind-Value="NewTransaction.Type">
+                                        @foreach(var type in Enum.GetValues<TransactionType>())
+                                        {
+                                            <option value="@type">
+                                                @type
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                @if(NewTransaction.Type == TransactionType.Transfer)
                                 {
-                                    <hr/>
-                                    <p>
-                                        Recipient:
-                                        @transaction.RecipientName
-                                    </p>
+                                    <h6>
+                                        Recipient Information
+                                    </h6>
+                                    <InputText class="form-control mb-2"
+                                               placeholder="Recipient name"
+                                               @bind-Value="NewTransaction.RecipientName"/>
+                                    <InputText class="form-control mb-2"
+                                               placeholder="Registration number"
+                                               @bind-Value="NewTransaction.RecipientRegistrationNumber"/>
+                                    <InputText class="form-control mb-2"
+                                               placeholder="Account number"
+                                               @bind-Value="NewTransaction.RecipientAccountNumber"/>
                                 }
-                                
-                                <button class="btn btn-sm btn-danger"
-                                        @onclick="() => DeleteTransaction(transaction.Id)">
-                                    Delete
+                                <button class="btn btn-success">
+                                    Create
                                 </button>
-                            </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+                <div class="card">
+                    <div class="card-body">
+                        <h5>
+                            Transaction History
+                        </h5>
+                        <hr/>
+                        @if(Transactions.Count == 0)
+                        {
+                            <p class="text-muted">
+                                No transactions yet.
+                            </p>
                         }
-                    }
+                        else
+                        {
+                            foreach(var transaction in Transactions)
+                            {
+                                <div class="border rounded p-3 mb-3">
+                                    @if(ShowEditTransactionForm &&
+                                        EditTransactionModel.Id == transaction.Id)
+                                    {
+                                        <EditForm Model="@EditTransactionModel"
+                                                  OnValidSubmit="UpdateTransaction">
+                                            <DataAnnotationsValidator/>
+                                            <ValidationSummary/>
+                                            <InputText class="form-control mb-2"
+                                                       @bind-Value="EditTransactionModel.Description"/>
+                                            <InputNumber class="form-control mb-2"
+                                                         @bind-Value="EditTransactionModel.Amount"/>
+                                            <InputSelect class="form-select mb-2"
+                                                         @bind-Value="EditTransactionModel.Type">
+                                                @foreach(var type in Enum.GetValues<TransactionType>())
+                                                {
+                                                    <option value="@type">
+                                                        @type
+                                                    </option>
+                                                }
+                                            </InputSelect>
+                                            @if(EditTransactionModel.Type == TransactionType.Transfer)
+                                            {
+                                                <InputText class="form-control mb-2"
+                                                           placeholder="Recipient name"
+                                                           @bind-Value="EditTransactionModel.RecipientName"/>
+                                                <InputText class="form-control mb-2"
+                                                           placeholder="Registration number"
+                                                           @bind-Value="EditTransactionModel.RecipientRegistrationNumber"/>
+                                                <InputText class="form-control mb-2"
+                                                           placeholder="Account number"
+                                                           @bind-Value="EditTransactionModel.RecipientAccountNumber"/>
+                                            }
+                                            <button class="btn btn-success">
+                                                Save
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-secondary ms-2"
+                                                    @onclick="CancelEditTransaction">
+                                                Cancel
+                                            </button>
+                                        </EditForm>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>
+                                                    @transaction.Description
+                                                </strong>
+                                                <br/>
+                                                <small>
+                                                    @transaction.TransactionDate.ToString("dd/MM/yyyy HH:mm")
+                                                </small>
+                                            </div>
+                                            <div>
+                                                @{
+                                                    var textClass =
+                                                        transaction.Type is TransactionType.Deposit or TransactionType.Received
+                                                        ? "text-success"
+                                                        : "text-danger";
+                                                }
+                                                
+                                                <strong class="@textClass">
+                                                    @transaction.Amount
+                                                </strong>
+                                                <br/>
+                                                <span>
+                                                    @transaction.Type
+                                                </span>
+                                            </div>
+                                        </div>
+                                        @if(transaction.Type == TransactionType.Transfer &&
+                                            !string.IsNullOrWhiteSpace(transaction.RecipientName))
+                                        {
+                                            <hr/>
+                                            <p>
+                                                <strong>
+                                                    Recipient:
+                                                </strong>
+                                                @transaction.RecipientName
+                                            </p>
+                                            <p>
+                                                <strong>
+                                                    Registration:
+                                                </strong>
+                                                @transaction.RecipientRegistrationNumber
+                                            </p>
+                                            <p>
+                                                <strong>
+                                                    Account:
+                                                </strong>
+                                                @transaction.RecipientAccountNumber
+                                            </p>
+                                        }
+                                        <button class="btn btn-sm btn-outline-primary"
+                                                @onclick="() => EditTransaction(transaction)">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-danger ms-2"
+                                                @onclick="() => DeleteTransaction(transaction.Id)">
+                                            Delete
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
                 </div>
             </div>
         }
@@ -205,132 +328,226 @@
 @code {
     [Parameter]
     public Guid id { get; set; }
-    
+
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
-    
+
     private Guid UserId;
+
     private BankAccountDetailDto? Account;
     private List<TransactionDto> Transactions = new();
+
     private bool ShowTransactionForm;
+    private bool ShowEditAccountForm;
+    private bool ShowEditTransactionForm;
+
     private CreateTransactionRequest NewTransaction = new()
     {
         Type = TransactionType.Debit
     };
-    
+
+    private UpdateBankAccountRequest EditAccount = new();
+
+    private UpdateTransactionRequest EditTransactionModel = new();
+
     protected override async Task OnInitializedAsync()
     {
-        var state =
-            await AuthenticationStateTask;
-        
-        var claim =
-            state.User.FindFirst(
-                ClaimTypes.NameIdentifier);
-        
-        if(claim != null)
-        {
-            UserId =
-                Guid.Parse(claim.Value);
-        }
-        await LoadAccount();
+        var state = await AuthenticationStateTask;
 
+        var claim = state.User.FindFirst(ClaimTypes.NameIdentifier);
+
+        if (claim != null)
+        {
+            UserId = Guid.Parse(claim.Value);
+        }
+
+        await LoadAccount();
     }
-    
+
     private async Task LoadAccount()
     {
-
         var accountResponse =
             await BankAccountService.GetAccountAsync(
                 UserId,
                 id);
-        
-        if(accountResponse.Success)
+
+        if (accountResponse.Success)
         {
-            Account =
-                accountResponse.Data;
+            Account = accountResponse.Data;
+
+            if (Account != null)
+            {
+                EditAccount = new UpdateBankAccountRequest
+                {
+                    Id = Account.Id,
+                    AccountName = Account.AccountName,
+                    AccountType = Account.AccountType,
+                    Balance = Account.Balance
+                };
+            }
         }
-        
+
         var transactionResponse =
             await TransactionService.GetAccountTransactionsAsync(
                 UserId,
                 id);
-        
-        if(transactionResponse.Success)
-        {
-            Transactions =
-                transactionResponse.Data ?? new();
-        }
 
+        if (transactionResponse.Success)
+        {
+            Transactions = transactionResponse.Data ?? new();
+        }
     }
 
     private void ToggleTransactionForm()
     {
-        ShowTransactionForm =
-            !ShowTransactionForm;
+        ShowTransactionForm = !ShowTransactionForm;
     }
     
-    private async Task CreateTransaction()
+    private void ToggleEditAccount()
     {
-        NewTransaction.BankAccountId =
-            id;
+        ShowEditAccountForm = !ShowEditAccountForm;
+    }
 
-        var response =
-            await TransactionService.CreateTransactionAsync(
-                UserId,
-                NewTransaction);
-
-        if(response.Success)
+    private void EditTransaction(TransactionDto transaction)
+    {
+        EditTransactionModel = new UpdateTransactionRequest
         {
-            ShowSuccess(
-                "Transaction created");
-            
-            NewTransaction =
-                new()
-                {
-                    Type = TransactionType.Debit
-                };
-            
-            ShowTransactionForm = false;
-            
+            Id = transaction.Id,
+            Description = transaction.Description,
+            Amount = transaction.Amount,
+            Type = transaction.Type,
+            RecipientName = transaction.RecipientName,
+            RecipientRegistrationNumber = transaction.RecipientRegistrationNumber,
+            RecipientAccountNumber = transaction.RecipientAccountNumber
+        };
+
+        ShowEditTransactionForm = true;
+    }
+
+    private void CancelEditTransaction()
+    {
+        ShowEditTransactionForm = false;
+
+        EditTransactionModel = new();
+    }
+
+    private async Task UpdateAccount()
+    {
+        var response =
+            await BankAccountService.UpdateAccountAsync(
+                UserId,
+                EditAccount);
+
+        if (response.Success)
+        {
+            ShowSuccess("Account updated");
+
+            ShowEditAccountForm = false;
+
             await LoadAccount();
         }
         else
         {
             ShowError(response.Message);
         }
-
     }
-    
+
+    private async Task UpdateTransaction()
+    {
+        if (EditTransactionModel.Type != TransactionType.Transfer)
+        {
+            EditTransactionModel.RecipientName = null;
+            EditTransactionModel.RecipientRegistrationNumber = null;
+            EditTransactionModel.RecipientAccountNumber = null;
+        }
+
+        var response =
+            await TransactionService.UpdateTransactionAsync(
+                UserId,
+                EditTransactionModel);
+
+        if (response.Success)
+        {
+            ShowSuccess("Transaction updated");
+
+            ShowEditTransactionForm = false;
+
+            EditTransactionModel = new();
+
+            await LoadAccount();
+        }
+        else
+        {
+            ShowError(response.Message);
+        }
+    }
+
+    private async Task CreateTransaction()
+    {
+        NewTransaction.BankAccountId = id;
+
+        if (NewTransaction.Type != TransactionType.Transfer)
+        {
+            NewTransaction.RecipientName = null;
+            NewTransaction.RecipientRegistrationNumber = null;
+            NewTransaction.RecipientAccountNumber = null;
+        }
+
+        var response =
+            await TransactionService.CreateTransactionAsync(
+                UserId,
+                NewTransaction);
+
+        if (response.Success)
+        {
+            ShowSuccess("Transaction created");
+
+            NewTransaction = new()
+            {
+                Type = TransactionType.Debit
+            };
+
+            ShowTransactionForm = false;
+
+            await LoadAccount();
+        }
+        else
+        {
+            ShowError(response.Message);
+        }
+    }
+
     private async Task DeleteTransaction(Guid transactionId)
     {
-        if(await JS.InvokeAsync<bool>(
-            "confirm",
-            "Delete transaction?"))
+        if (await JS.InvokeAsync<bool>(
+                "confirm",
+                "Delete transaction?"))
         {
             var response =
                 await TransactionService.DeleteTransactionAsync(
                     UserId,
                     transactionId);
-            if(response.Success)
+
+            if (response.Success)
             {
+                ShowSuccess("Transaction deleted");
+
                 await LoadAccount();
             }
             else
             {
                 ShowError(response.Message);
             }
-
         }
-
     }
-    
+
     private void ShowError(string message)
     {
         NotificationService.Notify(
             NotificationSeverity.Error,
             "Error",
             message,
-            4000);
+            closeOnClick: true);
     }
     
     private void ShowSuccess(string message)
@@ -339,6 +556,6 @@
             NotificationSeverity.Success,
             "Success",
             message,
-            4000);
+            closeOnClick: true);
     }
 }
