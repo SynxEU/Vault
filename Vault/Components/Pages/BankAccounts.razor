@@ -79,43 +79,7 @@
                                     <InputText class="form-control"
                                                @bind-Value="NewAccount.BankName" />
                                 </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        Currency
-                                    </label>
-                                    <InputText class="form-control"
-                                               @bind-Value="NewAccount.Currency" />
-                                </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        Account Number
-                                    </label>
-                                    <InputText class="form-control"
-                                               @bind-Value="NewAccount.AccountNumber" />
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        IBAN
-                                    </label>
-                                    <InputText class="form-control"
-                                               @bind-Value="NewAccount.IBAN" />
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">
-                                        Registration Number
-                                    </label>
-                                    <InputText class="form-control"
-                                               @bind-Value="NewAccount.RegistrationNumber" />
-                                </div>
-                                
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">
                                         Initial Balance
@@ -143,27 +107,31 @@
                     {
                         <div class="col-md-6 mb-4">
                             <RadzenCard>
-                                <h5>
-                                    @account.AccountName
-                                </h5>
-                                <p>
-                                    <strong>
-                                        Type:
-                                    </strong>
-                                    @account.AccountType
-                                </p>
-                                <p class="text-muted">
-                                    Created:
-                                    @account.CreatedAt.ToString("dd/MM/yyyy")
-                                </p>
+                                <div class="row">
+                                    <p class="col-md-6 text-uppercase fw-bold">
+                                        @account.AccountName
+                                    </p>
+                                    <p class="col-md-6 align-self-end">
+                                        @account.AccountType
+                                    </p>
+                                </div>
+                                <div class="row">
+                                    <p class="text-muted col-md-6">
+                                        @account.RegistrationNumber @account.AccountNumber
+                                    </p>
+                                    <p class="text-muted col-md-6 align-self-end">
+                                        @account.CreatedAt.ToString("dd/MM/yyyy")
+                                    </p>
+                                </div>
+
                                 <RadzenButton Size="ButtonSize.Small"
                                               Text="Open Account"
-                                              Click="@(() => OpenAccount(account.Id))" />
+                                              Click="@(() => OpenAccount(account.Id))"/>
                                 <RadzenButton Size="ButtonSize.Small"
                                               Text="Delete"
                                               ButtonStyle="ButtonStyle.Danger"
                                               class="ms-2"
-                                              Click="@(() => DeleteAccount(account.Id))" />
+                                              Click="@(() => DeleteAccount(account.Id))"/>
                             </RadzenCard>
                         </div>
                     }
@@ -258,6 +226,11 @@
     {
         if(!UserId.HasValue)
             return;
+
+        NewAccount.RegistrationNumber = Random.Shared.Next(1000, 10000).ToString();
+        NewAccount.AccountNumber = Random.Shared.NextInt64(1_000_000_000L, 10_000_000_000L).ToString();
+        NewAccount.IBAN = $"DK{Random.Shared.Next(10, 100)}{Random.Shared.NextInt64(1_000_000_000_000_000L, 10_000_000_000_000_000L)}";
+        NewAccount.Currency = "DKK";
         
         var response =
             await BankAccountService.CreateAccountAsync(

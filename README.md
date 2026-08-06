@@ -1,11 +1,11 @@
-# 🔐 Vault - Secure Bank Account Management System
+# Vault - Secure Bank Account Management System
 
 En Blazor Server applikation til sikker styring af bankkonti med kryptering af sensitiv data.
 
 ## Features
 
 - ✅ **Brugerauthentifikation** - Sikker login/register med BCrypt
-- ✅ **Bankkonti Management** - Opret, rediger og slet bankkonti
+- ✅ **Bankkonti Management** - Opret og slet bankkonti
 - ✅ **Transaktioner** - Spor alle transaktioner med fuldt krypteringsbeskyttelse
 - ✅ **AES-256 Kryptering** - Alle følsomme data krypteres (kontonummer, IBAN, saldo, transaktioner)
 - ✅ **Synlig Metadata** - Kontonavn og oprettelsesdato forbliver ukrypteret for hurtig navigation
@@ -16,7 +16,7 @@ En Blazor Server applikation til sikker styring af bankkonti med kryptering af s
 | Komponent | Teknologi                              |
 |-----------|----------------------------------------|
 | Framework | .NET 9 med Blazor Server               |
-| Database | SQL Server (LocalDB eller Azure)       |
+| Database | SQL Server (LocalDB eller SSMS)        |
 | Kryptering | System.Security.Cryptography (AES-256) |
 | Hashing | BCrypt.Net (workfactor 12)             |
 | ORM | Entity Framework Core                  |
@@ -88,18 +88,19 @@ Vault/
 
 Alle følgende data krypteres med **AES-256 (CBC mode)** med tilfældig IV for hver encryption:
 - Kontonummer
+- Registeringsnummer
 - IBAN
 - Kontosaldo
 - Valuta
-- Banknavn
 - Transaktionsbeskrivelse
 - Transaktionsbeløb
-- Transaktionstype
 - Modtager
 
 ### Metadata (Ikke Krypteret)
 - Kontonavn
 - Oprettelsesdato
+- KontoType
+- TransaktionsType
 - Transaktionsdato
 
 ### Adgangskodesikkerhed
@@ -113,8 +114,8 @@ Adgangskoder behandles med:
 
 ### Forudsætninger
 - .NET 9 SDK
-- SQL Server (LocalDB) eller Azure SQL Database forbindelse
-- Visual Studio 2022 eller VS Code
+- SQL Server (LocalDB) eller SSMS forbindelse
+- Visual Studio 2026 eller anden IDE
 
 ### Installation
 
@@ -153,12 +154,8 @@ Applikationen vil være tilgængelig på `https://localhost:7xxx`
 
 ## Databasemodeller
 
-### User
+### User (Identity)
 ```csharp
-- Id: int (Primary Key)
-- Username: string (Unique, Required)
-- Email: string (Unique, Required)
-- PasswordHash: string (BCrypt hash)
 - EncryptionKeyHash: string (Salt for key derivation)
 - CreatedAt: DateTime
 - UpdatedAt: DateTime
@@ -170,7 +167,9 @@ Applikationen vil være tilgængelig på `https://localhost:7xxx`
 - Id: int (Primary Key)
 - UserId: int (Foreign Key)
 - AccountName: string (Visible, Required)
+- AccountType: AccountType (Enum, Visible, Required)
 - EncryptedAccountNumber: string (Encrypted)
+- EncryptedRegistrationNumber: string (Encrypted)
 - EncryptedIBAN: string (Encrypted)
 - EncryptedBalance: string (Encrypted)
 - EncryptedCurrency: string (Encrypted)
@@ -184,10 +183,12 @@ Applikationen vil være tilgængelig på `https://localhost:7xxx`
 - Id: int (Primary Key)
 - BankAccountId: int (Foreign Key)
 - TransactionDate: DateTime (Visible)
+- TransactionType: TransactionType (Enum, Visible, Required)
 - EncryptedDescription: string (Encrypted)
 - EncryptedAmount: string (Encrypted)
-- EncryptedType: string (Encrypted) [Debit/Credit]
-- EncryptedRecipient: string (Encrypted, Optional)
+- EncryptedRecipientName: string (Encrypted, Optional)
+- EncryptedRecipientRegistrationNumber: string (Encrypted, Optional)
+- EncryptedRecipientAccountNumber: string (Encrypted, Optional)
 ```
 
 ## API/Service Documentation
@@ -204,14 +205,17 @@ Task<User?> GetUserByUsernameAsync(string username)
 ### IBankAccountService
 
 ```csharp
-// Bankkonti
 Task<ServiceResponse<BankAccountDetailDto>> CreateAccountAsync(int userId, CreateBankAccountRequest request)
 Task<ServiceResponse<BankAccountDetailDto>> GetAccountAsync(int userId, int accountId)
 Task<ServiceResponse<List<BankAccountDto>>> GetAllAccountsAsync(int userId)
 Task<ServiceResponse<BankAccountDetailDto>> UpdateAccountAsync(int userId, UpdateBankAccountRequest request)
 Task<ServiceResponse<bool>> DeleteAccountAsync(int userId, int accountId)
+```
 
-// Transaktioner
+
+### ITransactionService
+
+```csharp
 Task<ServiceResponse<TransactionDto>> CreateTransactionAsync(int userId, CreateTransactionRequest request)
 Task<ServiceResponse<List<TransactionDto>>> GetAccountTransactionsAsync(int userId, int accountId)
 Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId)
@@ -278,7 +282,6 @@ Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId
 
 - **Lazy Loading**: Relaterede entiteter loader ikke automatisk
 - **Efficient Queries**: Databaseforespørgsler bruger `.FirstOrDefaultAsync()` for at minimalisere data transfer
-- **Caching**: Session bruges til at cache bruger-ID og username
 - **Validation**: Input valideres både frontend og backend
 
 ## Future Enhancements
@@ -289,9 +292,8 @@ Task<ServiceResponse<bool>> DeleteTransactionAsync(int userId, int transactionId
 - [ ] Multiple currencies support
 - [ ] Recurring transactions
 - [ ] Budget tracking
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] Selenium E2E tests
+- [ ] Fiks opdatering af user
+- [ ] Fiks opdatering af bankkonti
 
 ## Licens
 

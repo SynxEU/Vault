@@ -11,8 +11,7 @@ namespace Vault.Domain.Entities
 
         // Not encrypted
         public string AccountName { get; set; } = string.Empty;
-
-        // Not encrypted
+        
         public AccountType AccountType { get; set; }
 
 

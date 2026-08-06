@@ -27,6 +27,8 @@ public class BankAccountDto
     public AccountType AccountType { get; set; }
 
     public string RegistrationNumber { get; set; } = string.Empty;
+    
+    public string AccountNumber { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }
 }
@@ -72,18 +74,15 @@ public class CreateBankAccountRequest
     [StringLength(10)]
     public string RegistrationNumber { get; set; } = string.Empty;
 
-    [Required]
-    [StringLength(50, MinimumLength = 1)]
+    [StringLength(50)]
     public string AccountNumber { get; set; } = string.Empty;
     
-    [Required]
-    [StringLength(64, MinimumLength = 1)]
+    [StringLength(64)]
     public string IBAN { get; set; } = string.Empty;
     
     [Range(typeof(decimal), "0", "79228162514264337593543950335")]
     public decimal Balance { get; set; }
     
-    [Required]
     [StringLength(3, MinimumLength = 3)]
     public string Currency { get; set; } = "DKK";
     

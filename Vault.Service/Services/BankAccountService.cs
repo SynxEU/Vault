@@ -154,20 +154,38 @@ public class BankAccountService : IBankAccountService
     {
         try
         {
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return new ServiceResponse<List<BankAccountDto>>
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            var (encryptionKey, _) = _encryptionService.DeriveKeyFromPassword(
+                user.EncryptionKeyHash,
+                user.EncryptionKeyHash);
+
             var accounts = await _dbContext.BankAccounts
                 .Where(a => a.UserId == userId)
-                .Select(a => new BankAccountDto
-                {
-                    Id = a.Id,
-                    AccountName = a.AccountName,
-                    CreatedAt = a.CreatedAt
-                })
                 .ToListAsync();
+
+            var result = accounts.Select(a => new BankAccountDto
+            {
+                Id = a.Id,
+                AccountName = a.AccountName,
+                AccountType = a.AccountType,
+                RegistrationNumber = DecryptRegistrationNumber(a, encryptionKey),
+                AccountNumber = DecryptAccountNumber(a, encryptionKey),
+                CreatedAt = a.CreatedAt
+            }).ToList();
 
             return new ServiceResponse<List<BankAccountDto>>
             {
                 Success = true,
-                Data = accounts
+                Data = result
             };
         }
         catch (Exception ex)
@@ -326,6 +344,18 @@ public class BankAccountService : IBankAccountService
                     bankNameIV),
             CreatedAt = account.CreatedAt
         };
+    }
+    
+    private string DecryptRegistrationNumber(BankAccount account, byte[] key)
+    {
+        var (value, iv) = ExtractEncryptedValue(account.EncryptedRegistrationNumber);
+        return _encryptionService.Decrypt(value, key, iv);
+    }
+
+    private string DecryptAccountNumber(BankAccount account, byte[] key)
+    {
+        var (value, iv) = ExtractEncryptedValue(account.EncryptedAccountNumber);
+        return _encryptionService.Decrypt(value, key, iv);
     }
     
     private (string encryptedValue, string iv) ExtractEncryptedValue(string encryptedData)

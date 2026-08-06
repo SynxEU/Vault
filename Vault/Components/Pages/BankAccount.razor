@@ -159,9 +159,13 @@
                                         </small>
                                     </div>
                                     <div>
-                                        <strong>
-                                            @transaction.Amount
-                                        </strong>
+                                        @{
+                                            var textClass = transaction.Type is TransactionType.Deposit or TransactionType.Received
+                                                ? "text-success"
+                                                : "text-danger";
+                                        }
+
+                                        <strong class="@textClass">@transaction.Amount</strong>
                                         <br/>
                                         <span>
                                             @transaction.Type
@@ -213,6 +217,7 @@
     {
         Type = TransactionType.Debit
     };
+    
     protected override async Task OnInitializedAsync()
     {
         var state =

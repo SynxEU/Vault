@@ -25,208 +25,191 @@ public class TransactionService : ITransactionService
     }
     
     public async Task<ServiceResponse<TransactionDto>> CreateTransactionAsync(
-    Guid userId,
-    CreateTransactionRequest request)
-{
-    IDbContextTransaction? dbTransaction = null;
-
-    if (_dbContext.Database.IsRelational())
+        Guid userId,
+        CreateTransactionRequest request)
     {
-        dbTransaction = await _dbContext.Database.BeginTransactionAsync();
-    }
-
-    try
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var account = await _dbContext.BankAccounts
-            .FirstOrDefaultAsync(a =>
-                a.Id == request.BankAccountId &&
-                a.UserId == userId);
-
-        if (account == null)
+        try
         {
-            return new ServiceResponse<TransactionDto>
+            ArgumentNullException.ThrowIfNull(request);
+
+            var account = await _dbContext.BankAccounts
+                .FirstOrDefaultAsync(a =>
+                    a.Id == request.BankAccountId &&
+                    a.UserId == userId);
+
+            if (account == null)
             {
-                Success = false,
-                Message = "Account not found"
-            };
-        }
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "Account not found"
+                };
+            }
 
-        var user = await _dbContext.Users.FindAsync(userId);
+            var user = await _dbContext.Users.FindAsync(userId);
 
-        if (user == null)
-        {
-            return new ServiceResponse<TransactionDto>
+            if (user == null)
             {
-                Success = false,
-                Message = "User not found"
-            };
-        }
-        
-        var (encryptionKey, _) =
-            _encryptionService.DeriveKeyFromPassword(
-                user.EncryptionKeyHash,
-                user.EncryptionKeyHash);
-        
-        // Get current balance
-        var (encryptedBalance, balanceIV) =
-            ExtractEncryptedValue(account.EncryptedBalance);
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+            
+            var (encryptionKey, _) =
+                _encryptionService.DeriveKeyFromPassword(
+                    user.EncryptionKeyHash,
+                    user.EncryptionKeyHash);
+            
+            // Get current balance
+            var (encryptedBalance, balanceIV) =
+                ExtractEncryptedValue(account.EncryptedBalance);
 
-        var currentBalance =
-            decimal.Parse(
-                _encryptionService.Decrypt(
-                    encryptedBalance,
-                    encryptionKey,
-                    balanceIV),
-                CultureInfo.InvariantCulture);
-        
-        // Calculate transaction effect
-        var balanceChange =
-            CalculateBalanceChange(
-                request.Type,
-                request.Amount);
-        
-        if (currentBalance + balanceChange < 0)
-        {
-            return new ServiceResponse<TransactionDto>
-            {
-                Success = false,
-                Message = "Insufficient funds"
-            };
-        }
-        
-        var newBalance =
-            currentBalance + balanceChange;
-        
-        // Update balance
-        var (newEncryptedBalance, newBalanceIV) =
-            _encryptionService.Encrypt(
-                newBalance.ToString(
-                    CultureInfo.InvariantCulture),
-                encryptionKey);
-
-        account.EncryptedBalance =
-            $"{newEncryptedBalance}:{newBalanceIV}";
-        
-        // Encrypt description
-        var (encryptedDescription, descIV) =
-            _encryptionService.Encrypt(
-                request.Description,
-                encryptionKey);
-        
-        // Encrypt amount
-        var (encryptedAmount, amountIV) =
-            _encryptionService.Encrypt(
-                request.Amount.ToString(
-                    CultureInfo.InvariantCulture),
-                encryptionKey);
-
-        // Encrypt recipient information
-
-        var recipientName =
-            request.RecipientName?.Trim() ?? string.Empty;
-
-        var recipientRegistration =
-            request.RecipientRegistrationNumber?.Trim() ?? string.Empty;
-
-        var recipientAccount =
-            request.RecipientAccountNumber?.Trim() ?? string.Empty;
-
-
-        var (encryptedRecipientName, recipientNameIV) =
-            _encryptionService.Encrypt(
-                recipientName,
-                encryptionKey);
-
-
-        var (encryptedRecipientRegistration, recipientRegistrationIV) =
-            _encryptionService.Encrypt(
-                recipientRegistration,
-                encryptionKey);
-        
-        var (encryptedRecipientAccount, recipientAccountIV) =
-            _encryptionService.Encrypt(
-                recipientAccount,
-                encryptionKey);
-        
-        var transaction = new Transaction
-        {
-            Id = Guid.NewGuid(),
-            BankAccountId =
-                request.BankAccountId,
-            TransactionDate =
-                DateTime.UtcNow,
-            Status =
-                TransactionStatus.Completed,
-            Type =
-                request.Type,
-            EncryptedDescription =
-                $"{encryptedDescription}:{descIV}",
-            EncryptedAmount =
-                $"{encryptedAmount}:{amountIV}",
-            EncryptedRecipientName =
-                $"{encryptedRecipientName}:{recipientNameIV}",
-            EncryptedRecipientRegistrationNumber =
-                $"{encryptedRecipientRegistration}:{recipientRegistrationIV}",
-            EncryptedRecipientAccountNumber =
-                $"{encryptedRecipientAccount}:{recipientAccountIV}"
-        };
-        
-        _dbContext.Transactions.Add(transaction);
-        
-        await _dbContext.SaveChangesAsync();
-        if (dbTransaction != null)
-        {
-            await dbTransaction.CommitAsync();
-        }
-        
-        return new ServiceResponse<TransactionDto>
-        {
-            Success = true,
-            Message = "Transaction completed successfully",
-            Data = new TransactionDto
-            {
-                Id = transaction.Id,
-                TransactionDate =
-                    transaction.TransactionDate,
-                Description =
-                    request.Description,
-                Amount =
-                    request.Amount,
-                Type =
+            var currentBalance =
+                decimal.Parse(
+                    _encryptionService.Decrypt(
+                        encryptedBalance,
+                        encryptionKey,
+                        balanceIV),
+                    CultureInfo.InvariantCulture);
+            
+            // Calculate transaction effect
+            var balanceChange =
+                CalculateBalanceChange(
                     request.Type,
+                    request.Amount);
+            
+            if (currentBalance + balanceChange < 0)
+            {
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "Insufficient funds"
+                };
+            }
+            
+            var newBalance =
+                currentBalance + balanceChange;
+            
+            // Update balance
+            var (newEncryptedBalance, newBalanceIV) =
+                _encryptionService.Encrypt(
+                    newBalance.ToString(
+                        CultureInfo.InvariantCulture),
+                    encryptionKey);
+
+            account.EncryptedBalance =
+                $"{newEncryptedBalance}:{newBalanceIV}";
+            
+            // Encrypt description
+            var (encryptedDescription, descIV) =
+                _encryptionService.Encrypt(
+                    request.Description,
+                    encryptionKey);
+            
+            // Encrypt amount
+            var (encryptedAmount, amountIV) =
+                _encryptionService.Encrypt(
+                    request.Amount.ToString(
+                        CultureInfo.InvariantCulture),
+                    encryptionKey);
+
+            // Encrypt recipient information
+            var recipientName =
+                request.RecipientName?.Trim() ?? string.Empty;
+
+            var recipientRegistration =
+                request.RecipientRegistrationNumber?.Trim() ?? string.Empty;
+
+            var recipientAccount =
+                request.RecipientAccountNumber?.Trim() ?? string.Empty;
+            
+            var (encryptedRecipientName, recipientNameIV) =
+                _encryptionService.Encrypt(
+                    recipientName,
+                    encryptionKey);
+            
+            var (encryptedRecipientRegistration, recipientRegistrationIV) =
+                _encryptionService.Encrypt(
+                    recipientRegistration,
+                    encryptionKey);
+            
+            var (encryptedRecipientAccount, recipientAccountIV) =
+                _encryptionService.Encrypt(
+                    recipientAccount,
+                    encryptionKey);
+            
+            var transaction = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                BankAccountId =
+                    request.BankAccountId,
+                TransactionDate =
+                    DateTime.UtcNow,
                 Status =
                     TransactionStatus.Completed,
-                RecipientName =
-                    string.IsNullOrWhiteSpace(recipientName)
-                        ? null
-                        : recipientName,
-                RecipientRegistrationNumber =
-                    string.IsNullOrWhiteSpace(recipientRegistration)
-                        ? null
-                        : recipientRegistration,
-                RecipientAccountNumber =
-                    string.IsNullOrWhiteSpace(recipientAccount)
-                        ? null
-                        : recipientAccount
-            }
-        };
-    }
-    catch (Exception ex)
-    {
-        if (dbTransaction != null)
-        {
-            await dbTransaction.RollbackAsync();
-        }
+                Type =
+                    request.Type,
+                EncryptedDescription =
+                    $"{encryptedDescription}:{descIV}",
+                EncryptedAmount =
+                    $"{encryptedAmount}:{amountIV}",
+                EncryptedRecipientName =
+                    $"{encryptedRecipientName}:{recipientNameIV}",
+                EncryptedRecipientRegistrationNumber =
+                    $"{encryptedRecipientRegistration}:{recipientRegistrationIV}",
+                EncryptedRecipientAccountNumber =
+                    $"{encryptedRecipientAccount}:{recipientAccountIV}"
+            };
 
-        return new ServiceResponse<TransactionDto>
+            _dbContext.BankAccounts.Update(account);
+            
+            _dbContext.Transactions.Add(transaction);
+            
+            await _dbContext.SaveChangesAsync();
+
+            return new ServiceResponse<TransactionDto>
+            {
+                Success = true,
+                Message = "Transaction completed successfully",
+                Data = new TransactionDto
+                {
+                    Id = transaction.Id,
+                    TransactionDate =
+                        transaction.TransactionDate,
+                    Description =
+                        request.Description,
+                    Amount =
+                        request.Amount,
+                    Type =
+                        request.Type,
+                    Status =
+                        TransactionStatus.Completed,
+                    RecipientName =
+                        string.IsNullOrWhiteSpace(recipientName)
+                            ? null
+                            : recipientName,
+                    RecipientRegistrationNumber =
+                        string.IsNullOrWhiteSpace(recipientRegistration)
+                            ? null
+                            : recipientRegistration,
+                    RecipientAccountNumber =
+                        string.IsNullOrWhiteSpace(recipientAccount)
+                            ? null
+                            : recipientAccount
+                }
+            };
+        }
+        catch (Exception ex)
         {
-            Success = false,
-            Message = $"Failed to create transaction: {ex.Message}"
-        };
+            return new ServiceResponse<TransactionDto>
+            {
+                Success = false,
+                Message = $"Failed to create transaction: {ex.Message}"
+            };
+        }
     }
-}
 
     public async Task<ServiceResponse<List<TransactionDto>>> GetAccountTransactionsAsync(Guid userId, Guid accountId)
     {
@@ -397,10 +380,10 @@ public class TransactionService : ITransactionService
     {
         return type switch
         {
-            TransactionType.Deposit => amount,
-            TransactionType.Received => amount,
-            TransactionType.Credit => amount,
-
+            TransactionType.Deposit => +amount,
+            TransactionType.Received => +amount,
+            
+            TransactionType.Credit => -amount,
             TransactionType.Withdraw => -amount,
             TransactionType.Debit => -amount,
             TransactionType.Purchase => -amount,
