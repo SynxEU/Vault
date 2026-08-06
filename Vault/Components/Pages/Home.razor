@@ -5,7 +5,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
 
-<PageTitle>Vault - Secure Banking</PageTitle>
+<PageTitle>Vault</PageTitle>
 
 <div class="hero-section">
     <div class="container text-center py-5">
@@ -140,7 +140,7 @@
                 NotificationSeverity.Success,
                 "Welcome back",
                 $"Welcome {authState.User.Identity.Name}!",
-                duration: 3000
+                closeOnClick: true
             );
         }
     }

@@ -10,7 +10,7 @@
 
 @rendermode InteractiveServer
 
-<PageTitle>My Accounts - Vault</PageTitle>
+<PageTitle>My Accounts</PageTitle>
 
 <AuthorizeView>
     <Authorized Context="authContext">
@@ -107,19 +107,20 @@
                     {
                         <div class="col-md-6 mb-4">
                             <RadzenCard>
-                                <div class="row">
-                                    <p class="col-md-6 text-uppercase fw-bold">
+                                <div class="d-flex justify-content-between">
+                                    <p class="text-uppercase fw-bold mb-0">
                                         @account.AccountName
                                     </p>
-                                    <p class="col-md-6 align-self-end">
+                                    <p class="mb-0">
                                         @account.AccountType
                                     </p>
                                 </div>
-                                <div class="row">
-                                    <p class="text-muted col-md-6">
+
+                                <div class="d-flex justify-content-between">
+                                    <p class="text-muted mb-0">
                                         @account.RegistrationNumber @account.AccountNumber
                                     </p>
-                                    <p class="text-muted col-md-6 align-self-end">
+                                    <p class="text-muted mb-0">
                                         @account.CreatedAt.ToString("dd/MM/yyyy")
                                     </p>
                                 </div>
@@ -289,7 +290,7 @@
             NotificationSeverity.Error,
             "Error",
             message,
-            4000);
+            closeOnClick: true);
     }
     
     private void ShowSuccess(string message)
@@ -298,6 +299,6 @@
             NotificationSeverity.Success,
             "Success",
             message,
-            4000);
+            closeOnClick: true);
     }
 }

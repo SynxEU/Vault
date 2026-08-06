@@ -5,7 +5,7 @@
 @inject NotificationService NotificationService
 @rendermode InteractiveServer
 
-<PageTitle>Register - Vault</PageTitle>
+<PageTitle>Register</PageTitle>
 
 <AuthorizeView>
     <Authorized>
@@ -134,7 +134,8 @@
             NotificationService.Notify(
                 NotificationSeverity.Error,
                 "Registration Failed",
-                response.Message ?? "Registration failed."
+                response.Message ?? "Registration failed.",
+                closeOnClick: true
             );
             IsBusy = false;
             return;
@@ -143,7 +144,8 @@
         NotificationService.Notify(
             NotificationSeverity.Success,
             "Success",
-            "Account created successfully."
+            "Account created successfully.",
+            closeOnClick: true
         );
         
         await Task.Delay(1500);
