@@ -115,30 +115,34 @@ public class TransactionService : ITransactionService
                         CultureInfo.InvariantCulture),
                     encryptionKey);
 
-            // Encrypt recipient information
-            var recipientName =
-                request.RecipientName?.Trim() ?? string.Empty;
+            string? encryptedRecipientName = string.Empty;
+            string? encryptedRecipientRegistration = string.Empty;
+            string? encryptedRecipientAccount = string.Empty;
 
-            var recipientRegistration =
-                request.RecipientRegistrationNumber?.Trim() ?? string.Empty;
+            if (request.Type == TransactionType.Transfer)
+            {
+                var recipientName =
+                    request.RecipientName?.Trim() ?? string.Empty;
 
-            var recipientAccount =
-                request.RecipientAccountNumber?.Trim() ?? string.Empty;
-            
-            var (encryptedRecipientName, recipientNameIV) =
-                _encryptionService.Encrypt(
-                    recipientName,
-                    encryptionKey);
-            
-            var (encryptedRecipientRegistration, recipientRegistrationIV) =
-                _encryptionService.Encrypt(
-                    recipientRegistration,
-                    encryptionKey);
-            
-            var (encryptedRecipientAccount, recipientAccountIV) =
-                _encryptionService.Encrypt(
-                    recipientAccount,
-                    encryptionKey);
+                var recipientRegistration =
+                    request.RecipientRegistrationNumber?.Trim() ?? string.Empty;
+
+                var recipientAccount =
+                    request.RecipientAccountNumber?.Trim() ?? string.Empty;
+
+                var (name, nameIV) =
+                    _encryptionService.Encrypt(recipientName, encryptionKey);
+
+                var (registration, registrationIV) =
+                    _encryptionService.Encrypt(recipientRegistration, encryptionKey);
+
+                var (accountNumber, accountIV) =
+                    _encryptionService.Encrypt(recipientAccount, encryptionKey);
+
+                encryptedRecipientName = $"{name}:{nameIV}";
+                encryptedRecipientRegistration = $"{registration}:{registrationIV}";
+                encryptedRecipientAccount = $"{accountNumber}:{accountIV}";
+            }
             
             var transaction = new Transaction
             {
@@ -155,12 +159,9 @@ public class TransactionService : ITransactionService
                     $"{encryptedDescription}:{descIV}",
                 EncryptedAmount =
                     $"{encryptedAmount}:{amountIV}",
-                EncryptedRecipientName =
-                    $"{encryptedRecipientName}:{recipientNameIV}",
-                EncryptedRecipientRegistrationNumber =
-                    $"{encryptedRecipientRegistration}:{recipientRegistrationIV}",
-                EncryptedRecipientAccountNumber =
-                    $"{encryptedRecipientAccount}:{recipientAccountIV}"
+                EncryptedRecipientName = encryptedRecipientName,
+                EncryptedRecipientRegistrationNumber = encryptedRecipientRegistration,
+                EncryptedRecipientAccountNumber = encryptedRecipientAccount
             };
 
             _dbContext.BankAccounts.Update(account);
@@ -187,17 +188,17 @@ public class TransactionService : ITransactionService
                     Status =
                         TransactionStatus.Completed,
                     RecipientName =
-                        string.IsNullOrWhiteSpace(recipientName)
+                        string.IsNullOrWhiteSpace(request.RecipientName)
                             ? null
-                            : recipientName,
+                            : request.RecipientName,
                     RecipientRegistrationNumber =
-                        string.IsNullOrWhiteSpace(recipientRegistration)
+                        string.IsNullOrWhiteSpace(request.RecipientRegistrationNumber)
                             ? null
-                            : recipientRegistration,
+                            : request.RecipientRegistrationNumber,
                     RecipientAccountNumber =
-                        string.IsNullOrWhiteSpace(recipientAccount)
+                        string.IsNullOrWhiteSpace(request.RecipientAccountNumber)
                             ? null
-                            : recipientAccount
+                            : request.RecipientAccountNumber
                 }
             };
         }
@@ -298,6 +299,200 @@ public class TransactionService : ITransactionService
         }
     }
     
+    public async Task<ServiceResponse<TransactionDto>> UpdateTransactionAsync(
+        Guid userId,
+        UpdateTransactionRequest request)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var transaction = await _dbContext.Transactions
+                .Include(t => t.BankAccount)
+                .FirstOrDefaultAsync(t =>
+                    t.Id == request.Id &&
+                    t.BankAccount != null &&
+                    t.BankAccount.UserId == userId);
+
+            if (transaction == null)
+            {
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "Transaction not found"
+                };
+            }
+
+            var user = await _dbContext.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "User not found"
+                };
+            }
+
+            var (encryptionKey, _) =
+                _encryptionService.DeriveKeyFromPassword(
+                    user.EncryptionKeyHash,
+                    user.EncryptionKeyHash);
+
+            // Current balance
+            var (encryptedBalance, balanceIV) =
+                ExtractEncryptedValue(transaction.BankAccount!.EncryptedBalance);
+
+            var currentBalance =
+                decimal.Parse(
+                    _encryptionService.Decrypt(
+                        encryptedBalance,
+                        encryptionKey,
+                        balanceIV),
+                    CultureInfo.InvariantCulture);
+
+            // Old transaction amount
+            var (oldAmountEncrypted, oldAmountIV) =
+                ExtractEncryptedValue(transaction.EncryptedAmount);
+
+            var oldAmount =
+                decimal.Parse(
+                    _encryptionService.Decrypt(
+                        oldAmountEncrypted,
+                        encryptionKey,
+                        oldAmountIV),
+                    CultureInfo.InvariantCulture);
+
+            // Reverse old transaction
+            currentBalance -= CalculateBalanceChange(
+                transaction.Type,
+                oldAmount);
+
+            // Apply new transaction
+            currentBalance += CalculateBalanceChange(
+                request.Type,
+                request.Amount);
+
+            if (currentBalance < 0)
+            {
+                return new ServiceResponse<TransactionDto>
+                {
+                    Success = false,
+                    Message = "Insufficient funds"
+                };
+            }
+
+            // Encrypt new balance
+            var (newEncryptedBalance, newBalanceIV) =
+                _encryptionService.Encrypt(
+                    currentBalance.ToString(CultureInfo.InvariantCulture),
+                    encryptionKey);
+
+            transaction.BankAccount.EncryptedBalance =
+                $"{newEncryptedBalance}:{newBalanceIV}";
+
+            // Encrypt description
+            var (encryptedDescription, descriptionIV) =
+                _encryptionService.Encrypt(
+                    request.Description,
+                    encryptionKey);
+
+            transaction.EncryptedDescription =
+                $"{encryptedDescription}:{descriptionIV}";
+
+            // Encrypt amount
+            var (encryptedAmount, amountIV) =
+                _encryptionService.Encrypt(
+                    request.Amount.ToString(CultureInfo.InvariantCulture),
+                    encryptionKey);
+
+            transaction.EncryptedAmount =
+                $"{encryptedAmount}:{amountIV}";
+
+            transaction.Type = request.Type;
+
+            // Recipient info
+            if (request.Type == TransactionType.Transfer)
+            {
+                var recipientName =
+                    request.RecipientName?.Trim() ?? string.Empty;
+
+                var recipientRegistration =
+                    request.RecipientRegistrationNumber?.Trim() ?? string.Empty;
+
+                var recipientAccount =
+                    request.RecipientAccountNumber?.Trim() ?? string.Empty;
+
+                var (encryptedRecipientName, recipientNameIV) =
+                    _encryptionService.Encrypt(
+                        recipientName,
+                        encryptionKey);
+
+                var (encryptedRecipientRegistration, recipientRegistrationIV) =
+                    _encryptionService.Encrypt(
+                        recipientRegistration,
+                        encryptionKey);
+
+                var (encryptedRecipientAccount, recipientAccountIV) =
+                    _encryptionService.Encrypt(
+                        recipientAccount,
+                        encryptionKey);
+
+                transaction.EncryptedRecipientName =
+                    $"{encryptedRecipientName}:{recipientNameIV}";
+
+                transaction.EncryptedRecipientRegistrationNumber =
+                    $"{encryptedRecipientRegistration}:{recipientRegistrationIV}";
+
+                transaction.EncryptedRecipientAccountNumber =
+                    $"{encryptedRecipientAccount}:{recipientAccountIV}";
+            }
+            else
+            {
+                transaction.EncryptedRecipientName = string.Empty;
+                transaction.EncryptedRecipientRegistrationNumber = string.Empty;
+                transaction.EncryptedRecipientAccountNumber = string.Empty;
+            }
+
+            _dbContext.BankAccounts.Update(transaction.BankAccount);
+            _dbContext.Transactions.Update(transaction);
+
+            await _dbContext.SaveChangesAsync();
+
+            return new ServiceResponse<TransactionDto>
+            {
+                Success = true,
+                Message = "Transaction updated successfully",
+                Data = new TransactionDto
+                {
+                    Id = transaction.Id,
+                    TransactionDate = transaction.TransactionDate,
+                    Description = request.Description,
+                    Amount = request.Amount,
+                    Type = request.Type,
+                    Status = transaction.Status,
+                    RecipientName = request.Type == TransactionType.Transfer
+                        ? request.RecipientName
+                        : null,
+                    RecipientRegistrationNumber = request.Type == TransactionType.Transfer
+                        ? request.RecipientRegistrationNumber
+                        : null,
+                    RecipientAccountNumber = request.Type == TransactionType.Transfer
+                        ? request.RecipientAccountNumber
+                        : null
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ServiceResponse<TransactionDto>
+            {
+                Success = false,
+                Message = $"Failed to update transaction: {ex.Message}"
+            };
+        }
+    }
+    
     private TransactionDto DecryptTransaction(
         Transaction transaction,
         byte[] encryptionKey)
@@ -308,35 +503,39 @@ public class TransactionService : ITransactionService
         var (amount, amountIV) =
             ExtractEncryptedValue(transaction.EncryptedAmount);
         
-        var (recipientName, recipientNameIV) =
-            ExtractEncryptedValue(
-                transaction.EncryptedRecipientName);
+        string? decryptedRecipientName = null;
+        string? decryptedRecipientRegistration = null;
+        string? decryptedRecipientAccount = null;
 
-        var (recipientRegistration, recipientRegistrationIV) =
-            ExtractEncryptedValue(
-                transaction.EncryptedRecipientRegistrationNumber);
+        if (transaction.Type == TransactionType.Transfer)
+        {
+            var (recipientName, recipientNameIV) =
+                ExtractEncryptedValue(transaction.EncryptedRecipientName);
 
-        var (recipientAccount, recipientAccountIV) =
-            ExtractEncryptedValue(
-                transaction.EncryptedRecipientAccountNumber);
-        
-        var decryptedRecipientName =
-            _encryptionService.Decrypt(
-                recipientName,
-                encryptionKey,
-                recipientNameIV);
+            var (recipientRegistration, recipientRegistrationIV) =
+                ExtractEncryptedValue(transaction.EncryptedRecipientRegistrationNumber);
 
-        var decryptedRecipientRegistration =
-            _encryptionService.Decrypt(
-                recipientRegistration,
-                encryptionKey,
-                recipientRegistrationIV);
-        
-        var decryptedRecipientAccount =
-            _encryptionService.Decrypt(
-                recipientAccount,
-                encryptionKey,
-                recipientAccountIV);
+            var (recipientAccount, recipientAccountIV) =
+                ExtractEncryptedValue(transaction.EncryptedRecipientAccountNumber);
+
+            decryptedRecipientName =
+                _encryptionService.Decrypt(
+                    recipientName,
+                    encryptionKey,
+                    recipientNameIV);
+
+            decryptedRecipientRegistration =
+                _encryptionService.Decrypt(
+                    recipientRegistration,
+                    encryptionKey,
+                    recipientRegistrationIV);
+
+            decryptedRecipientAccount =
+                _encryptionService.Decrypt(
+                    recipientAccount,
+                    encryptionKey,
+                    recipientAccountIV);
+        }
         
         return new TransactionDto
         {

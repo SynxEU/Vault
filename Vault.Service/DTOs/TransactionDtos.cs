@@ -55,3 +55,23 @@ public class CreateTransactionRequest
     [StringLength(50)]
     public string? RecipientAccountNumber { get; set; }
 }
+
+/// <summary>
+/// Update transaction request
+/// </summary>
+public class UpdateTransactionRequest
+{
+    public Guid Id { get; set; }
+
+    public string Description { get; set; } = "";
+
+    public decimal Amount { get; set; }
+
+    public TransactionType Type { get; set; }
+
+    public string? RecipientName { get; set; }
+
+    public string? RecipientRegistrationNumber { get; set; }
+
+    public string? RecipientAccountNumber { get; set; }
+}
