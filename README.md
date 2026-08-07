@@ -9,7 +9,6 @@ En Blazor Server applikation til sikker styring af bankkonti med kryptering af s
 - ✅ **Transaktioner** - Spor alle transaktioner med fuldt krypteringsbeskyttelse
 - ✅ **AES-256 Kryptering** - Alle følsomme data krypteres (kontonummer, IBAN, saldo, transaktioner)
 - ✅ **Synlig Metadata** - Kontonavn og oprettelsesdato forbliver ukrypteret for hurtig navigation
-- ✅ **Sikker Lagring** - Adgangskoder hashes med BCrypt workfactor 12
 
 ## Teknologi Stack
 
