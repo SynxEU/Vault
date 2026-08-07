@@ -103,13 +103,6 @@ Alle følgende data krypteres med **AES-256 (CBC mode)** med tilfældig IV for h
 - TransaktionsType
 - Transaktionsdato
 
-### Adgangskodesikkerhed
-
-Adgangskoder behandles med:
-- **BCrypt** med workfactor 12
-- Salt genereres automatisk
-- Krypteringsnøgler afledes fra adgangskoden via **PBKDF2** (10.000 iterationer, SHA-256)
-
 ## Setup Vejledning
 
 ### Forudsætninger
